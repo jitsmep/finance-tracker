@@ -1,0 +1,56 @@
+{
+  "name": "finance-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "next": "16.2.7",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "@prisma/client": "^6",
+    "@radix-ui/react-dialog": "^1",
+    "@radix-ui/react-dropdown-menu": "^2",
+    "@radix-ui/react-label": "^2",
+    "@radix-ui/react-select": "^2",
+    "@radix-ui/react-slot": "^1",
+    "@radix-ui/react-tabs": "^1",
+    "@radix-ui/react-tooltip": "^1",
+    "recharts": "^2",
+    "react-hook-form": "^7",
+    "@hookform/resolvers": "^5",
+    "zod": "^3",
+    "date-fns": "^4",
+    "lucide-react": "^0.511",
+    "class-variance-authority": "^0.7",
+    "clsx": "^2",
+    "tailwind-merge": "^3",
+    "next-themes": "^0.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "^15",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "prisma": "^6",
+    "tsx": "^4"
+  },
+  "overrides": {
+    "eslint-config-next": {
+      "next": "$next"
+    }
+  }
+}
