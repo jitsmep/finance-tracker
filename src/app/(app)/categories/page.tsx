@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+
+// ... your existing imports and component code continue below
 import { getCategories } from "@/lib/actions/categories"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
