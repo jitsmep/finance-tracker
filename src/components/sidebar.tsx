@@ -10,13 +10,16 @@ import {
   Settings,
   TrendingUp,
   Wallet,
+  Briefcase, // <-- 1. ADDED THE BRIEFCASE ICON HERE
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+// 2. ADDED THE PORTFOLIO LINK TO YOUR NAVIGATION ARRAY
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
   { href: "/budgets", label: "Budgets", icon: PieChart },
+  { href: "/portfolio", label: "Portfolio", icon: Briefcase }, // <-- NEW PORTFOLIO LINK
   { href: "/analytics", label: "Analytics", icon: TrendingUp },
   { href: "/categories", label: "Categories", icon: Tag },
   { href: "/settings", label: "Settings", icon: Settings },
