@@ -43,7 +43,36 @@ model Budget {
 }
 
 model Settings {
-  id           String @id @default("default")
-  currencyCode String @default("USD")
+  id           String   @id @default("default")
+  currencyCode String   @default("USD")
   updatedAt    DateTime @updatedAt
+}
+
+// --- NEW MODELS FOR NET WORTH & PORTFOLIO ---
+
+model Asset {
+  id          String   @id @default(cuid())
+  name        String   // e.g., "House", "Savings Account", "Rolex"
+  value       Float    // Current estimated value
+  type        String   // e.g., "Real Estate", "Cash", "Vehicle"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Liability {
+  id          String   @id @default(cuid())
+  name        String   // e.g., "Car Loan", "Credit Card", "Mortgage"
+  amount      Float    // How much you currently owe
+  interest    Float?   // Optional interest rate
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model StockPortfolio {
+  id          String   @id @default(cuid())
+  ticker      String   // e.g., "AAPL", "TSLA", "VOO"
+  shares      Float    // Number of shares owned
+  buyPrice    Float    // Average price paid per share
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
