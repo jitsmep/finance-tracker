@@ -1,3 +1,4 @@
+import { ThemeSettings } from "@/components/ThemeSettings";
 export const dynamic = "force-dynamic";
 import { getSettings } from "@/lib/actions/settings"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
