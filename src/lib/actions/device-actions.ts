@@ -21,7 +21,7 @@ export async function registerDevice(pin: string): Promise<{ deviceId: string }>
     data: { pin }, // In production, hash this with bcrypt
   })
 
-  // Seed default categories for this device
+  // Seed default categories for this device safely
   await prisma.category.createMany({
     data: DEFAULT_CATEGORIES.map((cat) => ({
       deviceId: device.id,
@@ -29,6 +29,7 @@ export async function registerDevice(pin: string): Promise<{ deviceId: string }>
       icon: cat.icon,
       isDefault: true,
     })),
+    skipDuplicates: true, // 👈 SAFETY NET ADDED
   })
 
   // Seed default settings for this device
