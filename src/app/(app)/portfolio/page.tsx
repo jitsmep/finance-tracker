@@ -1,14 +1,16 @@
-import { PrismaClient } from "@prisma/client";
+import { db as prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdvancedPortfolioPage() {
-  const prisma = new PrismaClient();
+  // Hardcode the default PIN/deviceId for now
+  const currentDeviceId = "system-default";
   
-  const assets = await prisma.asset.findMany().catch(() => []);
-  const liabilities = await prisma.liability.findMany().catch(() => []);
-  const stocks = await prisma.stockPortfolio.findMany().catch(() => []);
+  // 1. Fetch only the data for THIS specific locker
+  const assets = await prisma.asset.findMany({ where: { deviceId: currentDeviceId } }).catch(() => []);
+  const liabilities = await prisma.liability.findMany({ where: { deviceId: currentDeviceId } }).catch(() => []);
+  const stocks = await prisma.stockPortfolio.findMany({ where: { deviceId: currentDeviceId } }).catch(() => []);
 
   const totalAssets = assets.reduce((sum, item) => sum + item.value, 0);
   const totalLiabilities = liabilities.reduce((sum, item) => sum + item.amount, 0);
@@ -19,12 +21,13 @@ export default async function AdvancedPortfolioPage() {
 
   async function addAsset(formData: FormData) {
     "use server";
-    const p = new PrismaClient();
-    await p.asset.create({
+    // 2. Stamp the new item with the device ID
+    await prisma.asset.create({
       data: {
         name: formData.get("name") as string,
         value: parseFloat(formData.get("value") as string) || 0,
         type: formData.get("type") as string || "Other",
+        deviceId: currentDeviceId,
       }
     });
     revalidatePath("/portfolio");
@@ -32,12 +35,13 @@ export default async function AdvancedPortfolioPage() {
 
   async function addLiability(formData: FormData) {
     "use server";
-    const p = new PrismaClient();
-    await p.liability.create({
+    // 2. Stamp the new item with the device ID
+    await prisma.liability.create({
       data: {
         name: formData.get("name") as string,
         amount: parseFloat(formData.get("amount") as string) || 0,
         interest: parseFloat(formData.get("interest") as string) || 0,
+        deviceId: currentDeviceId,
       }
     });
     revalidatePath("/portfolio");
@@ -45,12 +49,13 @@ export default async function AdvancedPortfolioPage() {
 
   async function addStock(formData: FormData) {
     "use server";
-    const p = new PrismaClient();
-    await p.stockPortfolio.create({
+    // 2. Stamp the new item with the device ID
+    await prisma.stockPortfolio.create({
       data: {
         ticker: (formData.get("ticker") as string || "").toUpperCase(),
         shares: parseFloat(formData.get("shares") as string) || 0,
         buyPrice: parseFloat(formData.get("buyPrice") as string) || 0,
+        deviceId: currentDeviceId,
       }
     });
     revalidatePath("/portfolio");
