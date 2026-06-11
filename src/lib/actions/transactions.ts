@@ -1,8 +1,11 @@
 "use server"
 
-import { prisma } from "@/lib/prisma"
+// 1. Safe database connection
+import { db as prisma } from "@/lib/db"
 import { transactionSchema } from "@/lib/validations"
 import { revalidatePath } from "next/cache"
+
+const currentDeviceId = "system-default"
 
 export async function getTransactions(filters?: {
   type?: string
@@ -10,7 +13,10 @@ export async function getTransactions(filters?: {
   startDate?: string
   endDate?: string
 }) {
-  const where: Record<string, unknown> = {}
+  // 2. Automatically scope all queries to THIS specific locker
+  const where: Record<string, unknown> = {
+    deviceId: currentDeviceId 
+  }
 
   if (filters?.type && filters.type !== "all") {
     where.type = filters.type
@@ -49,7 +55,14 @@ export async function createTransaction(data: FormData) {
     return { error: parsed.error.flatten().fieldErrors }
   }
 
-  await prisma.transaction.create({ data: parsed.data })
+  // 3. Stamp the new transaction with the device ID
+  await prisma.transaction.create({ 
+    data: { 
+      ...parsed.data, 
+      deviceId: currentDeviceId 
+    } 
+  })
+  
   revalidatePath("/")
   revalidatePath("/transactions")
   revalidatePath("/budgets")
@@ -70,7 +83,11 @@ export async function updateTransaction(id: string, data: FormData) {
     return { error: parsed.error.flatten().fieldErrors }
   }
 
-  await prisma.transaction.update({ where: { id }, data: parsed.data })
+  await prisma.transaction.update({ 
+    where: { id }, 
+    data: parsed.data 
+  })
+  
   revalidatePath("/")
   revalidatePath("/transactions")
   revalidatePath("/budgets")
@@ -88,13 +105,14 @@ export async function deleteTransaction(id: string) {
 export async function getTransactionStats(month?: number, year?: number) {
   const now = new Date()
   const m = month ?? now.getMonth() + 1
-  const y = year ?? now.getFullYear()
+  const y = year ?? year ?? now.getFullYear()
 
   const startDate = new Date(y, m - 1, 1)
   const endDate = new Date(y, m, 0, 23, 59, 59)
 
   const transactions = await prisma.transaction.findMany({
     where: {
+      deviceId: currentDeviceId, // Only stats for THIS locker
       date: { gte: startDate, lte: endDate },
     },
     include: { category: true },
@@ -110,7 +128,6 @@ export async function getTransactionStats(month?: number, year?: number) {
 
   const balance = income - expenses
 
-  // Spending by category
   const categorySpending = transactions
     .filter((t) => t.type === "expense")
     .reduce(
@@ -140,7 +157,10 @@ export async function getMonthlyTrends(months: number = 6) {
     const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59)
 
     const transactions = await prisma.transaction.findMany({
-      where: { date: { gte: startDate, lte: endDate } },
+      where: { 
+        deviceId: currentDeviceId, // Only trends for THIS locker
+        date: { gte: startDate, lte: endDate } 
+      },
     })
 
     const income = transactions
