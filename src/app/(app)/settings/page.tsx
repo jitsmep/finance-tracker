@@ -1,45 +1,16 @@
 import { ThemeSettings } from "@/components/ThemeSettings";
-export const dynamic = "force-dynamic";
-import { getSettings } from "@/lib/actions/settings"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { CURRENCIES } from "@/lib/utils"
-import { CurrencySelector } from "./currency-selector"
 
-export default async function SettingsPage() {
-  const settings = await getSettings()
-
+export default function SettingsPage() {
   return (
-    <div className="p-6 space-y-6 max-w-2xl mx-auto animate-fade-in">
+    <div className="max-w-4xl mx-auto p-4 sm:p-8 space-y-8">
       <div>
-        <h2 className="text-2xl font-bold">Settings</h2>
-        <p className="text-sm text-muted-foreground mt-1">Manage your preferences</p>
+        <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+        <p className="text-muted-foreground mt-2">Manage your app preferences and account details.</p>
       </div>
 
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle className="text-base">Currency</CardTitle>
-          <CardDescription>
-            Select the currency to display throughout the app
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CurrencySelector
-            currentCode={settings.currencyCode}
-            currencies={CURRENCIES as unknown as { code: string; symbol: string; name: string }[]}
-          />
-        </CardContent>
-      </Card>
+      {/* This renders the interactive theme buttons we built! */}
+      <ThemeSettings />
 
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle className="text-base">About</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>Finance Tracker v1.0.0</p>
-          <p>Built with Next.js, Prisma, and Recharts</p>
-          <p>All data is stored locally in a SQLite database.</p>
-        </CardContent>
-      </Card>
     </div>
-  )
+  );
 }
