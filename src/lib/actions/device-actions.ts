@@ -1,6 +1,6 @@
 "use server"
 
-import { prisma } from "@/lib/db"
+import { db as prisma } from "@/lib/db"
 
 // Default categories seeded for each new device
 const DEFAULT_CATEGORIES = [
