@@ -45,8 +45,12 @@ export function PinGate({ children }: PinGateProps) {
     }
   }, [mode, step])
 
-  async function handleSetPin() {
-    if (pin.length !== 4) {
+  // FIX: We now accept the `completedPin` so we don't check stale React state!
+  async function handleSetPin(completedPin?: string) {
+    const checkPin = step === "enter" ? (completedPin || pin) : pin;
+    const checkConfirm = step === "confirm" ? (completedPin || confirmPin) : confirmPin;
+
+    if (checkPin.length !== 4) {
       setError("PIN must be 4 digits")
       return
     }
@@ -56,7 +60,7 @@ export function PinGate({ children }: PinGateProps) {
       setError("")
       return
     }
-    if (pin !== confirmPin) {
+    if (checkPin !== checkConfirm) {
       setError("PINs don't match. Try again.")
       setStep("enter")
       setPin("")
@@ -66,9 +70,9 @@ export function PinGate({ children }: PinGateProps) {
 
     setLoading(true)
     try {
-      const { deviceId } = await registerDevice(pin)
+      const { deviceId } = await registerDevice(checkPin)
       setDeviceId(deviceId)
-      setStoredPin(pin)
+      setStoredPin(checkPin)
       setAuthenticated(true)
       setMode("authenticated")
     } catch {
@@ -78,12 +82,15 @@ export function PinGate({ children }: PinGateProps) {
     }
   }
 
-  async function handleEnterPin() {
-    if (pin.length !== 4) return
+  // FIX: Accept the `completedPin` here too!
+  async function handleEnterPin(completedPin?: string) {
+    const checkPin = completedPin || pin;
+    
+    if (checkPin.length !== 4) return
     setLoading(true)
     const deviceId = getDeviceId()!
     try {
-      const { success } = await verifyDevicePin(deviceId, pin)
+      const { success } = await verifyDevicePin(deviceId, checkPin)
       if (success) {
         setAuthenticated(true)
         setMode("authenticated")
@@ -170,9 +177,10 @@ export function PinGate({ children }: PinGateProps) {
             setError("")
             if (val.length === 4) {
               if (isSettingPin) {
-                setTimeout(() => handleSetPin(), 100)
+                // Pass the fresh value directly!
+                setTimeout(() => handleSetPin(val), 100) 
               } else {
-                setTimeout(() => handleEnterPin(), 100)
+                setTimeout(() => handleEnterPin(val), 100)
               }
             }
           }}
@@ -198,9 +206,10 @@ export function PinGate({ children }: PinGateProps) {
                       setError("")
                       if (next.length === 4) {
                         if (isSettingPin) {
-                          setTimeout(() => handleSetPin(), 100)
+                          // Pass the fresh value directly!
+                          setTimeout(() => handleSetPin(next), 100) 
                         } else {
-                          setTimeout(() => handleEnterPin(), 100)
+                          setTimeout(() => handleEnterPin(next), 100)
                         }
                       }
                     }
