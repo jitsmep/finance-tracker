@@ -1,18 +1,16 @@
-import { PrismaClient } from "@prisma/client";
+import { db as prisma } from "@/lib/db";
 import { getCategories } from "@/lib/actions/categories"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CategoryActions } from "./category-actions" // Make sure this matches your actual import path!
+import { CategoryActions } from "./category-actions" 
 
 export const dynamic = "force-dynamic";
 
 export default async function CategoriesPage() {
-  const prisma = new PrismaClient();
   let categories = await getCategories();
 
   // 🚀 THE MAGIC AUTO-SEED: If 0 categories exist, build the defaults!
   if (categories.length === 0) {
-  // (Make sure you define or fetch your deviceId above this block!)
     const currentDeviceId = "system-default"; // Replace with your actual cookie/PIN logic later
 
     await prisma.category.createMany({
