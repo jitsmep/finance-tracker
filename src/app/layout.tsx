@@ -1,10 +1,7 @@
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-
-// Clean, single imports for your providers
-import { ThemeProvider } from "@/components/ThemeProvider"
-import { FinanceProvider } from "@/components/FinanceProvider"
+import { PinGate } from "@/components/pin-gate"
 
 const inter = Inter({
   variable: "--font-sans",
@@ -14,7 +11,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Finance Tracker — Personal Budget & Expense Manager",
-  description: "Track your income, expenses, and budgets.",
+  description:
+    "Track your income, expenses, and budgets with beautiful charts and insights. Stay on top of your personal finances.",
 }
 
 export default function RootLayout({
@@ -23,19 +21,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-300">
-        
-        {/* 1. Theme Engine handles Dark/Light mode */}
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          
-          {/* 2. Finance Engine handles Local Storage Data */}
-          <FinanceProvider>
-            {children}
-          </FinanceProvider>
-
-        </ThemeProvider>
-        
+    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <PinGate>{children}</PinGate>
       </body>
     </html>
   )
