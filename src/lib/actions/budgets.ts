@@ -1,8 +1,10 @@
 "use server"
 
-import { prisma } from "@/lib/prisma"
+import { db as prisma } from "@/lib/db"
 import { budgetSchema } from "@/lib/validations"
 import { revalidatePath } from "next/cache"
+
+const currentDeviceId = "system-default"
 
 export async function getBudgets(month?: number, year?: number) {
   const now = new Date()
@@ -10,11 +12,14 @@ export async function getBudgets(month?: number, year?: number) {
   const y = year ?? now.getFullYear()
 
   const budgets = await prisma.budget.findMany({
-    where: { month: m, year: y },
+    where: { 
+      deviceId: currentDeviceId, // Lock to this device
+      month: m, 
+      year: y 
+    },
     include: { category: true },
   })
 
-  // Calculate spent amounts for each budget
   const startDate = new Date(y, m - 1, 1)
   const endDate = new Date(y, m, 0, 23, 59, 59)
 
@@ -22,6 +27,7 @@ export async function getBudgets(month?: number, year?: number) {
     budgets.map(async (budget) => {
       const spent = await prisma.transaction.aggregate({
         where: {
+          deviceId: currentDeviceId, // Ensure spent math only counts THIS locker's transactions
           categoryId: budget.categoryId,
           type: "expense",
           date: { gte: startDate, lte: endDate },
@@ -56,17 +62,32 @@ export async function upsertBudget(data: FormData) {
     return { error: parsed.error.flatten().fieldErrors }
   }
 
-  await prisma.budget.upsert({
+  // CLEVER FIX: Instead of relying on compound keys that might crash, 
+  // we do a simple manual check-and-update to keep Vercel happy!
+  const existingBudget = await prisma.budget.findFirst({
     where: {
-      categoryId_month_year: {
-        categoryId: parsed.data.categoryId,
-        month: parsed.data.month,
-        year: parsed.data.year,
-      },
-    },
-    update: { limit: parsed.data.limit },
-    create: parsed.data,
+      deviceId: currentDeviceId,
+      categoryId: parsed.data.categoryId,
+      month: parsed.data.month,
+      year: parsed.data.year,
+    }
   })
+
+  if (existingBudget) {
+    // If it exists, update it
+    await prisma.budget.update({
+      where: { id: existingBudget.id },
+      data: { limit: parsed.data.limit }
+    })
+  } else {
+    // If it doesn't exist, create it and stamp the deviceId
+    await prisma.budget.create({
+      data: {
+        ...parsed.data,
+        deviceId: currentDeviceId
+      }
+    })
+  }
 
   revalidatePath("/")
   revalidatePath("/budgets")
