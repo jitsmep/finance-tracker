@@ -12,23 +12,26 @@ export default async function CategoriesPage() {
 
   // 🚀 THE MAGIC AUTO-SEED: If 0 categories exist, build the defaults!
   if (categories.length === 0) {
+  // (Make sure you define or fetch your deviceId above this block!)
+    const currentDeviceId = "system-default"; // Replace with your actual cookie/PIN logic later
+
     await prisma.category.createMany({
       data: [
         // Income
-        { name: "Salary", icon: "💰", isDefault: true },
+        { name: "Salary", icon: "💰", isDefault: true, deviceId: currentDeviceId },
         // Essentials
-        { name: "Groceries", icon: "🛒", isDefault: true },
-        { name: "Rent / EMI", icon: "🏠", isDefault: true },
-        { name: "Petrol & Transit", icon: "🚗", isDefault: true },
-        { name: "Utilities & Bills", icon: "⚡", isDefault: true },
+        { name: "Groceries", icon: "🛒", isDefault: true, deviceId: currentDeviceId },
+        { name: "Rent / EMI", icon: "🏠", isDefault: true, deviceId: currentDeviceId },
+        { name: "Petrol & Transit", icon: "🚗", isDefault: true, deviceId: currentDeviceId },
+        { name: "Utilities & Bills", icon: "⚡", isDefault: true, deviceId: currentDeviceId },
         // Savings & Investments
-        { name: "SIP & Mutual Funds", icon: "📈", isDefault: true },
-        { name: "Emergency Fund", icon: "🏦", isDefault: false },
+        { name: "SIP & Mutual Funds", icon: "📈", isDefault: true, deviceId: currentDeviceId },
+        { name: "Emergency Fund", icon: "🏦", isDefault: false, deviceId: currentDeviceId },
         // Variable/Lifestyle
-        { name: "Dining & Food", icon: "🍔", isDefault: false },
-        { name: "Shopping", icon: "🛍️", isDefault: false },
-        { name: "Health & Medical", icon: "💊", isDefault: false },
-        { name: "Entertainment", icon: "🎬", isDefault: false },
+        { name: "Dining & Food", icon: "🍔", isDefault: false, deviceId: currentDeviceId },
+        { name: "Shopping", icon: "🛍️", isDefault: false, deviceId: currentDeviceId },
+        { name: "Health & Medical", icon: "💊", isDefault: false, deviceId: currentDeviceId },
+        { name: "Entertainment", icon: "🎬", isDefault: false, deviceId: currentDeviceId },
       ],
       skipDuplicates: true,
     });
