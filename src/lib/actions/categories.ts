@@ -1,11 +1,17 @@
 "use server"
 
-import { prisma } from "@/lib/prisma"
+// 1. Fixed the import to use our safe database connection
+import { db as prisma } from "@/lib/db"
 import { categorySchema } from "@/lib/validations"
 import { revalidatePath } from "next/cache"
 
+// Hardcode the default PIN/deviceId for now to match the rest of the app
+const currentDeviceId = "system-default"
+
 export async function getCategories() {
   return prisma.category.findMany({
+    // 2. Only fetch categories for this specific device!
+    where: { deviceId: currentDeviceId },
     orderBy: { name: "asc" },
     include: {
       _count: {
@@ -26,16 +32,27 @@ export async function createCategory(data: FormData) {
     return { error: parsed.error.flatten().fieldErrors }
   }
 
-  // Check for duplicate name
+  // 3. Fixed duplicate check to use the compound unique key (deviceId + name)
   const existing = await prisma.category.findUnique({
-    where: { name: parsed.data.name },
+    where: { 
+      deviceId_name: {
+        deviceId: currentDeviceId,
+        name: parsed.data.name
+      }
+    },
   })
+  
   if (existing) {
     return { error: { name: ["Category already exists"] } }
   }
 
+  // 4. Injected the deviceId into the creation payload
   await prisma.category.create({
-    data: { ...parsed.data, isDefault: false },
+    data: { 
+      ...parsed.data, 
+      isDefault: false,
+      deviceId: currentDeviceId 
+    },
   })
 
   revalidatePath("/")
