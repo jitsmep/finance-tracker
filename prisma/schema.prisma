@@ -3,22 +3,32 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Device {
+  id        String   @id @default(cuid())
+  pin       String   // hashed PIN
+  createdAt DateTime @default(now())
 }
 
 model Category {
   id           String        @id @default(cuid())
-  name         String        @unique
+  deviceId     String
+  name         String
   icon         String        @default("📌")
   isDefault    Boolean       @default(false)
   createdAt    DateTime      @default(now())
   transactions Transaction[]
   budgets      Budget[]
+
+  @@unique([deviceId, name])
 }
 
 model Transaction {
   id         String   @id @default(cuid())
+  deviceId   String
   type       String   // "income" | "expense"
   amount     Float
   date       DateTime
@@ -31,6 +41,7 @@ model Transaction {
 
 model Budget {
   id         String   @id @default(cuid())
+  deviceId   String
   month      Int
   year       Int
   limit      Float
@@ -39,40 +50,41 @@ model Budget {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@unique([categoryId, month, year])
+  @@unique([deviceId, categoryId, month, year])
 }
 
 model Settings {
-  id           String   @id @default("default")
+  id           String   @id // deviceId is the id
   currencyCode String   @default("USD")
   updatedAt    DateTime @updatedAt
 }
 
-// --- NEW MODELS FOR NET WORTH & PORTFOLIO ---
-
 model Asset {
-  id          String   @id @default(cuid())
-  name        String   // e.g., "House", "Savings Account", "Rolex"
-  value       Float    // Current estimated value
-  type        String   // e.g., "Real Estate", "Cash", "Vehicle"
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  deviceId  String
+  name      String
+  value     Float
+  type      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Liability {
-  id          String   @id @default(cuid())
-  name        String   // e.g., "Car Loan", "Credit Card", "Mortgage"
-  amount      Float    // How much you currently owe
-  interest    Float?   // Optional interest rate
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  deviceId  String
+  name      String
+  amount    Float
+  interest  Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model StockPortfolio {
-  id          String   @id @default(cuid())
-  ticker      String   // e.g., "AAPL", "TSLA", "VOO"
-  shares      Float    // Number of shares owned
-  buyPrice    Float    // Average price paid per share
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  deviceId  String
+  ticker    String
+  shares    Float
+  buyPrice  Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
