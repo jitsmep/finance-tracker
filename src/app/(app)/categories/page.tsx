@@ -1,13 +1,41 @@
+import { PrismaClient } from "@prisma/client";
+import { getCategories } from "@/lib/actions/categories"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { CategoryActions } from "./category-actions" // Make sure this matches your actual import path!
+
 export const dynamic = "force-dynamic";
 
-// ... your existing imports and component code continue below
-import { getCategories } from "@/lib/actions/categories"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { CategoryActions } from "./category-actions"
-
 export default async function CategoriesPage() {
-  const categories = await getCategories()
+  const prisma = new PrismaClient();
+  let categories = await getCategories();
+
+  // 🚀 THE MAGIC AUTO-SEED: If 0 categories exist, build the defaults!
+  if (categories.length === 0) {
+    await prisma.category.createMany({
+      data: [
+        // Income
+        { name: "Salary", icon: "💰", isDefault: true },
+        // Essentials
+        { name: "Groceries", icon: "🛒", isDefault: true },
+        { name: "Rent / EMI", icon: "🏠", isDefault: true },
+        { name: "Petrol & Transit", icon: "🚗", isDefault: true },
+        { name: "Utilities & Bills", icon: "⚡", isDefault: true },
+        // Savings & Investments
+        { name: "SIP & Mutual Funds", icon: "📈", isDefault: true },
+        { name: "Emergency Fund", icon: "🏦", isDefault: false },
+        // Variable/Lifestyle
+        { name: "Dining & Food", icon: "🍔", isDefault: false },
+        { name: "Shopping", icon: "🛍️", isDefault: false },
+        { name: "Health & Medical", icon: "💊", isDefault: false },
+        { name: "Entertainment", icon: "🎬", isDefault: false },
+      ],
+      skipDuplicates: true,
+    });
+
+    // Re-fetch the newly created categories so they show up instantly
+    categories = await getCategories();
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-3xl mx-auto animate-fade-in">
@@ -30,8 +58,8 @@ export default async function CategoriesPage() {
                 <div>
                   <p className="font-medium text-sm">{cat.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {cat._count.transactions} transaction{cat._count.transactions !== 1 ? "s" : ""}
-                    {cat._count.budgets > 0 && ` · ${cat._count.budgets} budget${cat._count.budgets !== 1 ? "s" : ""}`}
+                    {cat._count?.transactions || 0} transaction{(cat._count?.transactions !== 1) ? "s" : ""}
+                    {(cat._count?.budgets ?? 0) > 0 && ` · ${cat._count.budgets} budget${cat._count.budgets !== 1 ? "s" : ""}`}
                   </p>
                 </div>
               </div>
