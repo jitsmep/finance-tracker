@@ -6,6 +6,7 @@ import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge" // <-- Added Badge for our recommendation pills
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,18 @@ import { createCategory, deleteCategory } from "@/lib/actions/categories"
 
 const COMMON_EMOJIS = ["🏠", "🍕", "🚗", "🎬", "⚡", "💊", "🛍️", "📚", "💰", "💻", "📈", "📌", "✈️", "🎵", "🏋️", "🐾", "🎁", "🍺", "☕", "🏖️"]
 
+// 1. ADDED OUR EVERYDAY RECOMMENDATIONS
+const RECOMMENDED_CATEGORIES = [
+  { name: "Groceries", icon: "🛒" },
+  { name: "Petrol & Transit", icon: "🚗" },
+  { name: "Rent / EMI", icon: "🏠" },
+  { name: "SIP & Invest", icon: "📈" },
+  { name: "Utilities", icon: "⚡" },
+  { name: "Dining Out", icon: "🍔" },
+  { name: "Health", icon: "💊" },
+  { name: "Salary", icon: "💰" }
+]
+
 interface CategoryActionsProps {
   categoryId?: string
 }
@@ -24,7 +37,11 @@ interface CategoryActionsProps {
 export function CategoryActions({ categoryId }: CategoryActionsProps) {
   const [open, setOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  
+  // 2. Added state to control the text input
   const [selectedEmoji, setSelectedEmoji] = useState("📌")
+  const [categoryName, setCategoryName] = useState("") 
+  
   const [errors, setErrors] = useState<Record<string, string[]>>({})
   const [deleteError, setDeleteError] = useState("")
   const [isPending, startTransition] = useTransition()
@@ -35,12 +52,7 @@ export function CategoryActions({ categoryId }: CategoryActionsProps) {
     return (
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 hover:text-destructive"
-            id={`delete-cat-${categoryId}`}
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-destructive">
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </DialogTrigger>
@@ -62,7 +74,6 @@ export function CategoryActions({ categoryId }: CategoryActionsProps) {
               variant="destructive"
               className="flex-1"
               disabled={isPending}
-              id="confirm-delete-cat-btn"
               onClick={() =>
                 startTransition(async () => {
                   const result = await deleteCategory(categoryId)
@@ -88,6 +99,7 @@ export function CategoryActions({ categoryId }: CategoryActionsProps) {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     formData.set("icon", selectedEmoji)
+    formData.set("name", categoryName) // Guarantee our controlled state is submitted
 
     startTransition(async () => {
       const result = await createCategory(formData)
@@ -95,6 +107,7 @@ export function CategoryActions({ categoryId }: CategoryActionsProps) {
         setErrors(result.error as Record<string, string[]>)
       } else {
         setOpen(false)
+        setCategoryName("") // Reset for next time
         setErrors({})
         router.refresh()
       }
@@ -104,7 +117,7 @@ export function CategoryActions({ categoryId }: CategoryActionsProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button id="add-category-btn" className="gap-2">
+        <Button className="gap-2">
           <Plus className="w-4 h-4" />
           Add Category
         </Button>
@@ -113,7 +126,28 @@ export function CategoryActions({ categoryId }: CategoryActionsProps) {
         <DialogHeader>
           <DialogTitle>New Category</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5 mt-2">
+        
+        {/* 3. NEW QUICK RECOMMENDATIONS SECTION */}
+        <div className="mt-2 space-y-3">
+          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Quick Recommendations</Label>
+          <div className="flex flex-wrap gap-2">
+            {RECOMMENDED_CATEGORIES.map((rec) => (
+              <Badge 
+                key={rec.name} 
+                variant="secondary" 
+                className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors py-1.5 px-3"
+                onClick={() => {
+                  setSelectedEmoji(rec.icon)
+                  setCategoryName(rec.name)
+                }}
+              >
+                {rec.icon} {rec.name}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5 mt-4 pt-4 border-t border-border">
           <div className="space-y-2">
             <Label>Icon</Label>
             <div className="grid grid-cols-10 gap-1.5">
@@ -138,16 +172,17 @@ export function CategoryActions({ categoryId }: CategoryActionsProps) {
               onChange={(e) => setSelectedEmoji(e.target.value)}
               className="w-24"
               maxLength={4}
-              id="custom-emoji-input"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cat-name">Name</Label>
+            <Label htmlFor="cat-name">Category Name</Label>
             <Input
               id="cat-name"
               name="name"
               placeholder="e.g. Groceries"
+              value={categoryName} // Bind to our state
+              onChange={(e) => setCategoryName(e.target.value)} // Update state on typing
               required
             />
             {errors.name && (
