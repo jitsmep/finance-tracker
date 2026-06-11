@@ -1,7 +1,10 @@
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
+
+// Clean, single imports for your providers
 import { ThemeProvider } from "@/components/ThemeProvider"
+import { FinanceProvider } from "@/components/FinanceProvider"
 
 const inter = Inter({
   variable: "--font-sans",
@@ -23,9 +26,14 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-300">
         
-        {/* We removed the floating ThemeToggle from here! */}
+        {/* 1. Theme Engine handles Dark/Light mode */}
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
+          
+          {/* 2. Finance Engine handles Local Storage Data */}
+          <FinanceProvider>
+            {children}
+          </FinanceProvider>
+
         </ThemeProvider>
         
       </body>
