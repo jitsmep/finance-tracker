@@ -39,7 +39,6 @@ export async function registerDevice(pin: string): Promise<{ deviceId: string }>
     },
   })
 
-  // 🚀 STAMP THE COOKIE SO THE SERVER KNOWS WHICH LOCKER IS YOURS
   const cookieStore = await cookies();
   cookieStore.set("deviceId", device.id, { path: "/", maxAge: 31536000 });
 
@@ -56,7 +55,6 @@ export async function verifyDevicePin(deviceId: string, pin: string): Promise<{ 
   const success = device.pin === pin;
   
   if (success) {
-    // 🚀 STAMP THE COOKIE ON LOGIN
     const cookieStore = await cookies();
     cookieStore.set("deviceId", device.id, { path: "/", maxAge: 31536000 });
   }
@@ -87,6 +85,32 @@ export async function updateDevicePin(
     where: { id: deviceId },
     data: { pin: newPin },
   })
+
+  return { success: true }
+}
+
+// Reset PIN after security question verification (client already verified the answer)
+export async function resetDevicePin(
+  deviceId: string,
+  newPin: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!newPin || newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+    return { success: false, error: "New PIN must be 4 digits" }
+  }
+
+  const device = await prisma.device.findUnique({
+    where: { id: deviceId },
+  })
+
+  if (!device) return { success: false, error: "Device not found" }
+
+  await prisma.device.update({
+    where: { id: deviceId },
+    data: { pin: newPin },
+  })
+
+  const cookieStore = await cookies();
+  cookieStore.set("deviceId", device.id, { path: "/", maxAge: 31536000 });
 
   return { success: true }
 }

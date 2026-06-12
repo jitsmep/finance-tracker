@@ -42,14 +42,24 @@ export default async function DashboardPage() {
 
   const now = new Date()
   const monthName = now.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+  const hour = now.getHours()
+  const greeting =
+    hour < 12 ? "Good morning" :
+    hour < 17 ? "Good afternoon" :
+    hour < 21 ? "Good evening" : "Good night"
+  const greetingEmoji =
+    hour < 12 ? "☀️" :
+    hour < 17 ? "🌤️" :
+    hour < 21 ? "🌆" : "🌙"
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto animate-fade-in">
+    <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 max-w-7xl mx-auto animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Dashboard</h2>
-          <p className="text-sm text-muted-foreground mt-1">{monthName} overview</p>
+          <p className="text-sm text-muted-foreground font-medium">{greetingEmoji} {greeting}!</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground mt-0.5">Overview</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{monthName}</p>
         </div>
         <TransactionForm categories={categories} />
       </div>
