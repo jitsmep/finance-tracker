@@ -2,9 +2,17 @@
 
 import { db as prisma } from "@/lib/db"
 import { revalidatePath } from "next/cache"
+import { cookies } from "next/headers"
 
-export async function getSettings(deviceId: string) {
-  if (!deviceId) return { id: "", currencyCode: "USD", updatedAt: new Date() }
+// Read the unique locker ID from the cookie
+async function getLockerId() {
+  const cookieStore = await cookies();
+  return cookieStore.get("deviceId")?.value || "system-default";
+}
+
+export async function getSettings() {
+  const deviceId = await getLockerId();
+  if (!deviceId || deviceId === "system-default") return { id: "", currencyCode: "USD", updatedAt: new Date() }
 
   let settings = await prisma.settings.findUnique({ where: { id: deviceId } })
 
@@ -17,8 +25,9 @@ export async function getSettings(deviceId: string) {
   return settings
 }
 
-export async function updateCurrency(deviceId: string, currencyCode: string) {
-  if (!deviceId) return { error: "Device not found" }
+export async function updateCurrency(currencyCode: string) {
+  const deviceId = await getLockerId();
+  if (!deviceId || deviceId === "system-default") return { error: "Device not found" }
   if (!currencyCode) return { error: "Currency code is required" }
 
   await prisma.settings.upsert({
@@ -33,7 +42,7 @@ export async function updateCurrency(deviceId: string, currencyCode: string) {
   return { success: true }
 }
 
-export async function updateSettings(deviceId: string, data: FormData) {
+export async function updateSettings(data: FormData) {
   const currencyCode = data.get("currencyCode") as string
-  return updateCurrency(deviceId, currencyCode)
+  return updateCurrency(currencyCode)
 }

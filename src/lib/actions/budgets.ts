@@ -3,9 +3,17 @@
 import { db as prisma } from "@/lib/db"
 import { budgetSchema } from "@/lib/validations"
 import { revalidatePath } from "next/cache"
+import { cookies } from "next/headers"
 
-export async function getBudgets(deviceId: string, month?: number, year?: number) {
-  if (!deviceId) return []
+// Read the unique locker ID from the cookie
+async function getLockerId() {
+  const cookieStore = await cookies();
+  return cookieStore.get("deviceId")?.value || "system-default";
+}
+
+export async function getBudgets(month?: number, year?: number) {
+  const deviceId = await getLockerId();
+  if (!deviceId || deviceId === "system-default") return []
 
   const now = new Date()
   const m = month ?? now.getMonth() + 1
@@ -44,8 +52,9 @@ export async function getBudgets(deviceId: string, month?: number, year?: number
   return budgetsWithSpent
 }
 
-export async function upsertBudget(deviceId: string, data: FormData) {
-  if (!deviceId) return { error: { deviceId: ["Device not found"] } }
+export async function upsertBudget(data: FormData) {
+  const deviceId = await getLockerId();
+  if (!deviceId || deviceId === "system-default") return { error: { deviceId: ["Device not found"] } }
 
   const raw = {
     limit: data.get("limit"),
@@ -82,8 +91,9 @@ export async function upsertBudget(deviceId: string, data: FormData) {
   return { success: true }
 }
 
-export async function deleteBudget(deviceId: string, id: string) {
-  if (!deviceId) return { error: "Device not found" }
+export async function deleteBudget(id: string) {
+  const deviceId = await getLockerId();
+  if (!deviceId || deviceId === "system-default") return { error: "Device not found" }
 
   await prisma.budget.deleteMany({ where: { id, deviceId } })
 

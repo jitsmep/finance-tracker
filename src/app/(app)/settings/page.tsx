@@ -1,33 +1,17 @@
-import { PrismaClient } from "@prisma/client";
+import { getSettings, updateCurrency } from "@/lib/actions/settings";
 import { revalidatePath } from "next/cache";
 import { ThemeSettings } from "@/components/ThemeSettings";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const prisma = new PrismaClient();
-  
-  // 1. Fetch existing settings from your database
-  let settings = await prisma.settings.findUnique({
-    where: { id: "default" }
-  }).catch(() => null);
+  const settings = await getSettings();
 
-  // If no settings exist yet, create the default one automatically
-  if (!settings) {
-    settings = await prisma.settings.create({
-      data: { id: "default", currencyCode: "USD" }
-    }).catch(() => ({ id: "default", currencyCode: "USD", updatedAt: new Date() }));
-  }
-
-  // 2. Server Action to save the currency to the database
-  async function updateCurrency(formData: FormData) {
+  // Server Action to save the currency to the database
+  async function handleUpdateCurrency(formData: FormData) {
     "use server";
-    const p = new PrismaClient();
-    await p.settings.upsert({
-      where: { id: "default" },
-      update: { currencyCode: formData.get("currency") as string },
-      create: { id: "default", currencyCode: formData.get("currency") as string }
-    });
+    const currencyCode = formData.get("currency") as string;
+    await updateCurrency(currencyCode);
     revalidatePath("/settings");
   }
 
@@ -46,7 +30,7 @@ export default async function SettingsPage() {
             <h3 className="text-lg font-bold">Preferences</h3>
             <p className="text-sm text-muted-foreground">Manage your default currency and localization.</p>
           </div>
-          <form action={updateCurrency} className="flex flex-col gap-4">
+          <form action={handleUpdateCurrency} className="flex flex-col gap-4">
             <div className="space-y-2">
               <label className="text-sm font-semibold">Default Currency</label>
               <select 

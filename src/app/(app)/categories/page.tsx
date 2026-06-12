@@ -1,4 +1,3 @@
-import { db as prisma } from "@/lib/db";
 import { getCategories } from "@/lib/actions/categories"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -7,36 +6,7 @@ import { CategoryActions } from "./category-actions"
 export const dynamic = "force-dynamic";
 
 export default async function CategoriesPage() {
-  let categories = await getCategories();
-
-  // 🚀 THE MAGIC AUTO-SEED: If 0 categories exist, build the defaults!
-  if (categories.length === 0) {
-    const currentDeviceId = "system-default"; // Replace with your actual cookie/PIN logic later
-
-    await prisma.category.createMany({
-      data: [
-        // Income
-        { name: "Salary", icon: "💰", isDefault: true, deviceId: currentDeviceId },
-        // Essentials
-        { name: "Groceries", icon: "🛒", isDefault: true, deviceId: currentDeviceId },
-        { name: "Rent / EMI", icon: "🏠", isDefault: true, deviceId: currentDeviceId },
-        { name: "Petrol & Transit", icon: "🚗", isDefault: true, deviceId: currentDeviceId },
-        { name: "Utilities & Bills", icon: "⚡", isDefault: true, deviceId: currentDeviceId },
-        // Savings & Investments
-        { name: "SIP & Mutual Funds", icon: "📈", isDefault: true, deviceId: currentDeviceId },
-        { name: "Emergency Fund", icon: "🏦", isDefault: false, deviceId: currentDeviceId },
-        // Variable/Lifestyle
-        { name: "Dining & Food", icon: "🍔", isDefault: false, deviceId: currentDeviceId },
-        { name: "Shopping", icon: "🛍️", isDefault: false, deviceId: currentDeviceId },
-        { name: "Health & Medical", icon: "💊", isDefault: false, deviceId: currentDeviceId },
-        { name: "Entertainment", icon: "🎬", isDefault: false, deviceId: currentDeviceId },
-      ],
-      skipDuplicates: true,
-    });
-
-    // Re-fetch the newly created categories so they show up instantly
-    categories = await getCategories();
-  }
+  const categories = await getCategories();
 
   return (
     <div className="p-6 space-y-6 max-w-3xl mx-auto animate-fade-in">

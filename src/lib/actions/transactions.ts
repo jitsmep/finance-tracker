@@ -1,6 +1,7 @@
 "use server"
 
 import { db as prisma } from "@/lib/db"
+import { transactionSchema } from "@/lib/validations"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 
@@ -32,16 +33,25 @@ export async function getTransactions(filters?: any) {
 
 export async function createTransaction(data: FormData) {
   const currentDeviceId = await getLockerId();
-  const amount = parseFloat(data.get("amount") as string)
-  const date = new Date(data.get("date") as string)
+
+  const raw = {
+    type: data.get("type"),
+    amount: data.get("amount"),
+    date: data.get("date"),
+    note: data.get("note") || undefined,
+    categoryId: data.get("categoryId"),
+  }
+
+  const parsed = transactionSchema.safeParse(raw)
+  if (!parsed.success) return { error: parsed.error.flatten().fieldErrors }
 
   await prisma.transaction.create({ 
     data: { 
-      type: data.get("type") as string,
-      amount,
-      date,
-      note: data.get("note") as string | null,
-      categoryId: data.get("categoryId") as string,
+      type: parsed.data.type,
+      amount: parsed.data.amount,
+      date: parsed.data.date,
+      note: parsed.data.note ?? null,
+      categoryId: parsed.data.categoryId,
       deviceId: currentDeviceId 
     } 
   })
@@ -53,17 +63,25 @@ export async function createTransaction(data: FormData) {
 }
 
 export async function updateTransaction(id: string, data: FormData) {
-  const amount = parseFloat(data.get("amount") as string)
-  const date = new Date(data.get("date") as string)
+  const raw = {
+    type: data.get("type"),
+    amount: data.get("amount"),
+    date: data.get("date"),
+    note: data.get("note") || undefined,
+    categoryId: data.get("categoryId"),
+  }
+
+  const parsed = transactionSchema.safeParse(raw)
+  if (!parsed.success) return { error: parsed.error.flatten().fieldErrors }
 
   await prisma.transaction.update({ 
     where: { id }, 
     data: {
-      type: data.get("type") as string,
-      amount,
-      date,
-      note: data.get("note") as string | null,
-      categoryId: data.get("categoryId") as string,
+      type: parsed.data.type,
+      amount: parsed.data.amount,
+      date: parsed.data.date,
+      note: parsed.data.note ?? null,
+      categoryId: parsed.data.categoryId,
     } 
   })
   

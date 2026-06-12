@@ -3,9 +3,17 @@
 import { db as prisma } from "@/lib/db"
 import { categorySchema } from "@/lib/validations"
 import { revalidatePath } from "next/cache"
+import { cookies } from "next/headers"
 
-export async function getCategories(deviceId: string) {
-  if (!deviceId) return []
+// Read the unique locker ID from the cookie
+async function getLockerId() {
+  const cookieStore = await cookies();
+  return cookieStore.get("deviceId")?.value || "system-default";
+}
+
+export async function getCategories() {
+  const deviceId = await getLockerId();
+  if (!deviceId || deviceId === "system-default") return []
 
   return prisma.category.findMany({
     where: { deviceId },
@@ -16,8 +24,9 @@ export async function getCategories(deviceId: string) {
   })
 }
 
-export async function createCategory(deviceId: string, data: FormData) {
-  if (!deviceId) return { error: { deviceId: ["Device not found"] } }
+export async function createCategory(data: FormData) {
+  const deviceId = await getLockerId();
+  if (!deviceId || deviceId === "system-default") return { error: { deviceId: ["Device not found"] } }
 
   const raw = {
     name: data.get("name"),
@@ -46,8 +55,9 @@ export async function createCategory(deviceId: string, data: FormData) {
   return { success: true }
 }
 
-export async function deleteCategory(deviceId: string, id: string) {
-  if (!deviceId) return { error: "Device not found" }
+export async function deleteCategory(id: string) {
+  const deviceId = await getLockerId();
+  if (!deviceId || deviceId === "system-default") return { error: "Device not found" }
 
   const category = await prisma.category.findFirst({ where: { id, deviceId } })
   if (!category) return { error: "Category not found" }
