@@ -102,3 +102,19 @@ export const DEFAULT_CATEGORIES = [
   { name: "Investment", icon: "📈", isDefault: true },
   { name: "Other", icon: "📌", isDefault: true },
 ] as const
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+// This combines Tailwind classes cleanly
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+// 🚀 THIS FIXES YOUR CURRENCY BUG
+export function formatCurrency(amount: number, currencyCode: string = "USD") {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currencyCode,
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
