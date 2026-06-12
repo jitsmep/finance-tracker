@@ -4,19 +4,15 @@ import { db as prisma } from "@/lib/db"
 import { budgetSchema } from "@/lib/validations"
 import { revalidatePath } from "next/cache"
 
-const currentDeviceId = "system-default"
+export async function getBudgets(deviceId: string, month?: number, year?: number) {
+  if (!deviceId) return []
 
-export async function getBudgets(month?: number, year?: number) {
   const now = new Date()
   const m = month ?? now.getMonth() + 1
   const y = year ?? now.getFullYear()
 
   const budgets = await prisma.budget.findMany({
-    where: { 
-      deviceId: currentDeviceId, // Lock to this device
-      month: m, 
-      year: y 
-    },
+    where: { deviceId, month: m, year: y },
     include: { category: true },
   })
 
@@ -27,14 +23,13 @@ export async function getBudgets(month?: number, year?: number) {
     budgets.map(async (budget) => {
       const spent = await prisma.transaction.aggregate({
         where: {
-          deviceId: currentDeviceId, // Ensure spent math only counts THIS locker's transactions
+          deviceId,
           categoryId: budget.categoryId,
           type: "expense",
           date: { gte: startDate, lte: endDate },
         },
         _sum: { amount: true },
       })
-
       return {
         ...budget,
         spent: spent._sum.amount ?? 0,
@@ -49,7 +44,9 @@ export async function getBudgets(month?: number, year?: number) {
   return budgetsWithSpent
 }
 
-export async function upsertBudget(data: FormData) {
+export async function upsertBudget(deviceId: string, data: FormData) {
+  if (!deviceId) return { error: { deviceId: ["Device not found"] } }
+
   const raw = {
     limit: data.get("limit"),
     categoryId: data.get("categoryId"),
@@ -58,34 +55,25 @@ export async function upsertBudget(data: FormData) {
   }
 
   const parsed = budgetSchema.safeParse(raw)
-  if (!parsed.success) {
-    return { error: parsed.error.flatten().fieldErrors }
-  }
+  if (!parsed.success) return { error: parsed.error.flatten().fieldErrors }
 
-  // CLEVER FIX: Instead of relying on compound keys that might crash, 
-  // we do a simple manual check-and-update to keep Vercel happy!
   const existingBudget = await prisma.budget.findFirst({
     where: {
-      deviceId: currentDeviceId,
+      deviceId,
       categoryId: parsed.data.categoryId,
       month: parsed.data.month,
       year: parsed.data.year,
-    }
+    },
   })
 
   if (existingBudget) {
-    // If it exists, update it
     await prisma.budget.update({
       where: { id: existingBudget.id },
-      data: { limit: parsed.data.limit }
+      data: { limit: parsed.data.limit },
     })
   } else {
-    // If it doesn't exist, create it and stamp the deviceId
     await prisma.budget.create({
-      data: {
-        ...parsed.data,
-        deviceId: currentDeviceId
-      }
+      data: { ...parsed.data, deviceId },
     })
   }
 
@@ -94,8 +82,11 @@ export async function upsertBudget(data: FormData) {
   return { success: true }
 }
 
-export async function deleteBudget(id: string) {
-  await prisma.budget.delete({ where: { id } })
+export async function deleteBudget(deviceId: string, id: string) {
+  if (!deviceId) return { error: "Device not found" }
+
+  await prisma.budget.deleteMany({ where: { id, deviceId } })
+
   revalidatePath("/")
   revalidatePath("/budgets")
   return { success: true }
