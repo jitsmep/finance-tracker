@@ -29,12 +29,12 @@ export default async function TransactionsPage({ searchParams }: Props) {
   const totalExpenses = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto animate-fade-in">
+    <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 max-w-5xl mx-auto animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Transactions</h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h2 className="text-xl sm:text-2xl font-bold">Transactions</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             {transactions.length} transaction{transactions.length !== 1 ? "s" : ""} found
           </p>
         </div>

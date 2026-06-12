@@ -28,10 +28,10 @@ export default async function AnalyticsPage() {
   const savingsRate = avgIncome > 0 ? Math.round((avgSavings / avgIncome) * 100) : 0
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto animate-fade-in">
+    <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 max-w-5xl mx-auto animate-fade-in">
       <div>
-        <h2 className="text-2xl font-bold">Analytics</h2>
-        <p className="text-sm text-muted-foreground mt-1">6-month financial overview</p>
+        <h2 className="text-xl sm:text-2xl font-bold">Analytics</h2>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">6-month financial overview</p>
       </div>
 
       {/* Key Metrics */}

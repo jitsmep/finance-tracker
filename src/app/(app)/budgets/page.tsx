@@ -35,12 +35,12 @@ export default async function BudgetsPage({ searchParams }: Props) {
   })
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto animate-fade-in">
+    <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 max-w-4xl mx-auto animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Budgets</h2>
-          <p className="text-sm text-muted-foreground mt-1">{monthName}</p>
+          <h2 className="text-xl sm:text-2xl font-bold">Budgets</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{monthName}</p>
         </div>
         <BudgetForm
           categories={categories}
@@ -106,7 +106,7 @@ export default async function BudgetsPage({ searchParams }: Props) {
                 isOver && "border-destructive/30"
               )}>
                 <CardContent className="pt-5 pb-5">
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{budget.category.icon}</span>
                       <div>
@@ -116,21 +116,21 @@ export default async function BudgetsPage({ searchParams }: Props) {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 ml-auto sm:ml-0">
                       {isOver ? (
                         <div className="flex items-center gap-1.5 text-destructive text-xs font-medium">
                           <AlertTriangle className="w-3.5 h-3.5" />
-                          Over by {formatCurrency(Math.abs(remaining), currency)}
+                          <span className="hidden sm:inline">Over by</span> {formatCurrency(Math.abs(remaining), currency)}
                         </div>
                       ) : isWarning ? (
                         <div className="flex items-center gap-1.5 text-[oklch(0.795_0.184_86)] text-xs font-medium">
                           <TrendingUp className="w-3.5 h-3.5" />
-                          {formatCurrency(remaining, currency)} left
+                          {formatCurrency(remaining, currency)} <span className="hidden sm:inline">left</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5 text-[oklch(0.696_0.17_162)] text-xs font-medium">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          {formatCurrency(remaining, currency)} left
+                          {formatCurrency(remaining, currency)} <span className="hidden sm:inline">left</span>
                         </div>
                       )}
                       <span className="text-xs font-bold text-foreground">

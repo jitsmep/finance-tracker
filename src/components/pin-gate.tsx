@@ -42,7 +42,7 @@ export function PinGate({ children }: PinGateProps) {
   const [newPinForReset, setNewPinForReset] = useState("")
 
   // Security question state
-  const [selectedQuestion, setSelectedQuestion] = useState(SECURITY_QUESTIONS[0])
+  const [selectedQuestion, setSelectedQuestion] = useState<string>(SECURITY_QUESTIONS[0])
   const [securityAnswer, setSecurityAnswerInput] = useState("")
   const [securityAnswerError, setSecurityAnswerError] = useState("")
 
@@ -258,7 +258,7 @@ export function PinGate({ children }: PinGateProps) {
               <label className="text-sm font-semibold text-foreground">Security Question</label>
               <select
                 value={selectedQuestion}
-                onChange={(e) => setSelectedQuestion(e.target.value as typeof SECURITY_QUESTIONS[number])}
+                onChange={(e) => setSelectedQuestion(e.target.value)}
                 className="w-full p-3 rounded-xl bg-secondary/60 border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition"
               >
                 {SECURITY_QUESTIONS.map((q) => (
