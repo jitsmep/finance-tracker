@@ -1,6 +1,7 @@
 import { getSettings, updateCurrency } from "@/lib/actions/settings";
 import { revalidatePath } from "next/cache";
 import { ThemeSettings } from "@/components/ThemeSettings";
+import { ChangePinForm } from "@/components/ChangePinForm";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,9 @@ export default async function SettingsPage() {
 
         {/* === SECTION 2: THEME SETTINGS === */}
         <ThemeSettings />
+
+        {/* === SECTION 3: CHANGE PASSCODE === */}
+        <ChangePinForm />
 
       </div>
     </div>

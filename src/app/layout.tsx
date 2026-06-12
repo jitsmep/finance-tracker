@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { PinGate } from "@/components/pin-gate"
+import { ThemeProvider } from "@/components/ThemeProvider"
 
 const inter = Inter({
   variable: "--font-sans",
@@ -21,9 +22,16 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <PinGate>{children}</PinGate>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <PinGate>{children}</PinGate>
+        </ThemeProvider>
       </body>
     </html>
   )

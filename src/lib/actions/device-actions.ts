@@ -63,3 +63,30 @@ export async function verifyDevicePin(deviceId: string, pin: string): Promise<{ 
   
   return { success } 
 }
+
+export async function updateDevicePin(
+  deviceId: string,
+  oldPin: string,
+  newPin: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!newPin || newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+    return { success: false, error: "New PIN must be 4 digits" }
+  }
+
+  const device = await prisma.device.findUnique({
+    where: { id: deviceId },
+  })
+
+  if (!device) return { success: false, error: "Device not found" }
+
+  if (device.pin !== oldPin) {
+    return { success: false, error: "Current PIN is incorrect" }
+  }
+
+  await prisma.device.update({
+    where: { id: deviceId },
+    data: { pin: newPin },
+  })
+
+  return { success: true }
+}
