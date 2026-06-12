@@ -1,6 +1,7 @@
 "use server"
 
 import { db as prisma } from "@/lib/db"
+import { cookies } from "next/headers"
 
 // Default categories seeded for each new device
 const DEFAULT_CATEGORIES = [
@@ -15,13 +16,11 @@ const DEFAULT_CATEGORIES = [
   { name: "Other", icon: "📌" },
 ]
 
-// Register a new device with a PIN, return the new deviceId
 export async function registerDevice(pin: string): Promise<{ deviceId: string }> {
   const device = await prisma.device.create({
-    data: { pin }, // In production, hash this with bcrypt
+    data: { pin }, 
   })
 
-  // Seed default categories for this device safely
   await prisma.category.createMany({
     data: DEFAULT_CATEGORIES.map((cat) => ({
       deviceId: device.id,
@@ -29,10 +28,9 @@ export async function registerDevice(pin: string): Promise<{ deviceId: string }>
       icon: cat.icon,
       isDefault: true,
     })),
-    skipDuplicates: true, // 👈 SAFETY NET ADDED
+    skipDuplicates: true,
   })
 
-  // Seed default settings for this device
   await prisma.settings.create({
     data: {
       id: device.id,
@@ -41,18 +39,27 @@ export async function registerDevice(pin: string): Promise<{ deviceId: string }>
     },
   })
 
+  // 🚀 STAMP THE COOKIE SO THE SERVER KNOWS WHICH LOCKER IS YOURS
+  const cookieStore = await cookies();
+  cookieStore.set("deviceId", device.id, { path: "/", maxAge: 31536000 });
+
   return { deviceId: device.id }
 }
 
-// Verify PIN for existing device
-export async function verifyDevicePin(
-  deviceId: string,
-  pin: string
-): Promise<{ success: boolean }> {
+export async function verifyDevicePin(deviceId: string, pin: string): Promise<{ success: boolean }> {
   const device = await prisma.device.findUnique({
     where: { id: deviceId },
   })
 
   if (!device) return { success: false }
-  return { success: device.pin === pin } // Hash comparison in production
+  
+  const success = device.pin === pin;
+  
+  if (success) {
+    // 🚀 STAMP THE COOKIE ON LOGIN
+    const cookieStore = await cookies();
+    cookieStore.set("deviceId", device.id, { path: "/", maxAge: 31536000 });
+  }
+  
+  return { success } 
 }
