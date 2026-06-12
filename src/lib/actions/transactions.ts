@@ -1,7 +1,6 @@
 "use server"
 
 import { db as prisma } from "@/lib/db"
-import { transactionSchema } from "@/lib/validations"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 
@@ -11,18 +10,17 @@ async function getLockerId() {
   return cookieStore.get("deviceId")?.value || "system-default";
 }
 
-export async function getTransactions(filters?: { type?: string; categoryId?: string; startDate?: string; endDate?: string }) {
+export async function getTransactions(filters?: any) {
   const currentDeviceId = await getLockerId();
-  
-  const where: Record<string, unknown> = { deviceId: currentDeviceId }
+  const where: any = { deviceId: currentDeviceId }
 
   if (filters?.type && filters.type !== "all") where.type = filters.type
   if (filters?.categoryId && filters.categoryId !== "all") where.categoryId = filters.categoryId
   
   if (filters?.startDate || filters?.endDate) {
     where.date = {}
-    if (filters.startDate) (where.date as Record<string, unknown>).gte = new Date(filters.startDate)
-    if (filters.endDate) (where.date as Record<string, unknown>).lte = new Date(filters.endDate)
+    if (filters.startDate) where.date.gte = new Date(filters.startDate)
+    if (filters.endDate) where.date.lte = new Date(filters.endDate)
   }
 
   return prisma.transaction.findMany({
@@ -34,20 +32,18 @@ export async function getTransactions(filters?: { type?: string; categoryId?: st
 
 export async function createTransaction(data: FormData) {
   const currentDeviceId = await getLockerId();
-  
-  const raw = {
-    type: data.get("type"),
-    amount: data.get("amount"),
-    date: data.get("date"),
-    note: data.get("note"),
-    categoryId: data.get("categoryId"),
-  }
-
-  const parsed = transactionSchema.safeParse(raw)
-  if (!parsed.success) return { error: parsed.error.flatten().fieldErrors }
+  const amount = parseFloat(data.get("amount") as string)
+  const date = new Date(data.get("date") as string)
 
   await prisma.transaction.create({ 
-    data: { ...parsed.data, deviceId: currentDeviceId } 
+    data: { 
+      type: data.get("type") as string,
+      amount,
+      date,
+      note: data.get("note") as string | null,
+      categoryId: data.get("categoryId") as string,
+      deviceId: currentDeviceId 
+    } 
   })
   
   revalidatePath("/")
@@ -57,16 +53,19 @@ export async function createTransaction(data: FormData) {
 }
 
 export async function updateTransaction(id: string, data: FormData) {
-  const parsed = transactionSchema.safeParse({
-    type: data.get("type"),
-    amount: data.get("amount"),
-    date: data.get("date"),
-    note: data.get("note"),
-    categoryId: data.get("categoryId"),
-  })
-  if (!parsed.success) return { error: parsed.error.flatten().fieldErrors }
+  const amount = parseFloat(data.get("amount") as string)
+  const date = new Date(data.get("date") as string)
 
-  await prisma.transaction.update({ where: { id }, data: parsed.data })
+  await prisma.transaction.update({ 
+    where: { id }, 
+    data: {
+      type: data.get("type") as string,
+      amount,
+      date,
+      note: data.get("note") as string | null,
+      categoryId: data.get("categoryId") as string,
+    } 
+  })
   
   revalidatePath("/")
   revalidatePath("/transactions")
