@@ -3,49 +3,37 @@
 import { db as prisma } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 
-const currentDeviceId = "system-default"
+export async function getSettings(deviceId: string) {
+  if (!deviceId) return { id: "", currencyCode: "USD", updatedAt: new Date() }
 
-export async function getSettings() {
-  let settings = await prisma.settings.findUnique({
-    where: { id: currentDeviceId },
-  })
+  let settings = await prisma.settings.findUnique({ where: { id: deviceId } })
 
   if (!settings) {
     settings = await prisma.settings.create({
-      data: {
-        id: currentDeviceId,
-        currencyCode: "USD",
-      },
+      data: { id: deviceId, currencyCode: "USD" },
     })
   }
 
   return settings
 }
 
-export async function updateCurrency(currencyCode: string) {
-  if (!currencyCode) {
-    return { error: "Currency code is required" }
-  }
+export async function updateCurrency(deviceId: string, currencyCode: string) {
+  if (!deviceId) return { error: "Device not found" }
+  if (!currencyCode) return { error: "Currency code is required" }
 
   await prisma.settings.upsert({
-    where: { id: currentDeviceId },
+    where: { id: deviceId },
     update: { currencyCode },
-    create: {
-      id: currentDeviceId,
-      currencyCode,
-    },
+    create: { id: deviceId, currencyCode },
   })
 
   revalidatePath("/")
   revalidatePath("/settings")
   revalidatePath("/dashboard")
-  revalidatePath("/portfolio")
-
   return { success: true }
 }
 
-export async function updateSettings(data: FormData) {
+export async function updateSettings(deviceId: string, data: FormData) {
   const currencyCode = data.get("currencyCode") as string
-
-  return updateCurrency(currencyCode)
+  return updateCurrency(deviceId, currencyCode)
 }
