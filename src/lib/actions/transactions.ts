@@ -1,37 +1,28 @@
 "use server"
 
-// 1. Safe database connection
 import { db as prisma } from "@/lib/db"
 import { transactionSchema } from "@/lib/validations"
 import { revalidatePath } from "next/cache"
 
-const currentDeviceId = "system-default"
+export async function getTransactions(
+  deviceId: string,
+  filters?: {
+    type?: string
+    categoryId?: string
+    startDate?: string
+    endDate?: string
+  }
+) {
+  if (!deviceId) return []
 
-export async function getTransactions(filters?: {
-  type?: string
-  categoryId?: string
-  startDate?: string
-  endDate?: string
-}) {
-  // 2. Automatically scope all queries to THIS specific locker
-  const where: Record<string, unknown> = {
-    deviceId: currentDeviceId 
-  }
+  const where: Record<string, unknown> = { deviceId }
 
-  if (filters?.type && filters.type !== "all") {
-    where.type = filters.type
-  }
-  if (filters?.categoryId && filters.categoryId !== "all") {
-    where.categoryId = filters.categoryId
-  }
+  if (filters?.type && filters.type !== "all") where.type = filters.type
+  if (filters?.categoryId && filters.categoryId !== "all") where.categoryId = filters.categoryId
   if (filters?.startDate || filters?.endDate) {
     where.date = {}
-    if (filters.startDate) {
-      (where.date as Record<string, unknown>).gte = new Date(filters.startDate)
-    }
-    if (filters.endDate) {
-      (where.date as Record<string, unknown>).lte = new Date(filters.endDate)
-    }
+    if (filters.startDate) (where.date as Record<string, unknown>).gte = new Date(filters.startDate)
+    if (filters.endDate) (where.date as Record<string, unknown>).lte = new Date(filters.endDate)
   }
 
   return prisma.transaction.findMany({
@@ -41,7 +32,9 @@ export async function getTransactions(filters?: {
   })
 }
 
-export async function createTransaction(data: FormData) {
+export async function createTransaction(deviceId: string, data: FormData) {
+  if (!deviceId) return { error: { deviceId: ["Device not found"] } }
+
   const raw = {
     type: data.get("type"),
     amount: data.get("amount"),
@@ -51,25 +44,21 @@ export async function createTransaction(data: FormData) {
   }
 
   const parsed = transactionSchema.safeParse(raw)
-  if (!parsed.success) {
-    return { error: parsed.error.flatten().fieldErrors }
-  }
+  if (!parsed.success) return { error: parsed.error.flatten().fieldErrors }
 
-  // 3. Stamp the new transaction with the device ID
-  await prisma.transaction.create({ 
-    data: { 
-      ...parsed.data, 
-      deviceId: currentDeviceId 
-    } 
+  await prisma.transaction.create({
+    data: { ...parsed.data, deviceId },
   })
-  
+
   revalidatePath("/")
   revalidatePath("/transactions")
   revalidatePath("/budgets")
   return { success: true }
 }
 
-export async function updateTransaction(id: string, data: FormData) {
+export async function updateTransaction(deviceId: string, id: string, data: FormData) {
+  if (!deviceId) return { error: { deviceId: ["Device not found"] } }
+
   const raw = {
     type: data.get("type"),
     amount: data.get("amount"),
@@ -79,53 +68,48 @@ export async function updateTransaction(id: string, data: FormData) {
   }
 
   const parsed = transactionSchema.safeParse(raw)
-  if (!parsed.success) {
-    return { error: parsed.error.flatten().fieldErrors }
-  }
+  if (!parsed.success) return { error: parsed.error.flatten().fieldErrors }
 
-  await prisma.transaction.update({ 
-    where: { id }, 
-    data: parsed.data 
+  // Ensure the transaction belongs to this device
+  await prisma.transaction.updateMany({
+    where: { id, deviceId },
+    data: parsed.data,
   })
-  
+
   revalidatePath("/")
   revalidatePath("/transactions")
   revalidatePath("/budgets")
   return { success: true }
 }
 
-export async function deleteTransaction(id: string) {
-  await prisma.transaction.delete({ where: { id } })
+export async function deleteTransaction(deviceId: string, id: string) {
+  if (!deviceId) return { error: "Device not found" }
+
+  await prisma.transaction.deleteMany({ where: { id, deviceId } })
+
   revalidatePath("/")
   revalidatePath("/transactions")
   revalidatePath("/budgets")
   return { success: true }
 }
 
-export async function getTransactionStats(month?: number, year?: number) {
+export async function getTransactionStats(deviceId: string, month?: number, year?: number) {
+  if (!deviceId) return { income: 0, expenses: 0, balance: 0, categorySpending: {}, transactions: [] }
+
   const now = new Date()
   const m = month ?? now.getMonth() + 1
-  const y = year ?? year ?? now.getFullYear()
+  const y = year ?? now.getFullYear()
 
   const startDate = new Date(y, m - 1, 1)
   const endDate = new Date(y, m, 0, 23, 59, 59)
 
   const transactions = await prisma.transaction.findMany({
-    where: {
-      deviceId: currentDeviceId, // Only stats for THIS locker
-      date: { gte: startDate, lte: endDate },
-    },
+    where: { deviceId, date: { gte: startDate, lte: endDate } },
     include: { category: true },
   })
 
-  const income = transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0)
-
-  const expenses = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0)
-
+  const income = transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
+  const expenses = transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0)
   const balance = income - expenses
 
   const categorySpending = transactions
@@ -133,10 +117,9 @@ export async function getTransactionStats(month?: number, year?: number) {
     .reduce(
       (acc, t) => {
         const catName = t.category.name
-        const catIcon = t.category.icon
         acc[catName] = {
           amount: (acc[catName]?.amount ?? 0) + t.amount,
-          icon: catIcon,
+          icon: t.category.icon,
           categoryId: t.categoryId,
         }
         return acc
@@ -147,7 +130,9 @@ export async function getTransactionStats(month?: number, year?: number) {
   return { income, expenses, balance, categorySpending, transactions }
 }
 
-export async function getMonthlyTrends(months: number = 6) {
+export async function getMonthlyTrends(deviceId: string, months: number = 6) {
+  if (!deviceId) return []
+
   const now = new Date()
   const results = []
 
@@ -157,20 +142,11 @@ export async function getMonthlyTrends(months: number = 6) {
     const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59)
 
     const transactions = await prisma.transaction.findMany({
-      where: { 
-        deviceId: currentDeviceId, // Only trends for THIS locker
-        date: { gte: startDate, lte: endDate } 
-      },
+      where: { deviceId, date: { gte: startDate, lte: endDate } },
     })
 
-    const income = transactions
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + t.amount, 0)
-
-    const expenses = transactions
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + t.amount, 0)
-
+    const income = transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
+    const expenses = transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0)
     const monthName = date.toLocaleDateString("en-US", { month: "short" })
 
     results.push({ month: monthName, income, expenses, savings: income - expenses })
