@@ -156,3 +156,45 @@ export async function updateProfilePin(
 
   return { success: true }
 }
+
+export async function continueAsGuest(): Promise<{ success: boolean; error?: string; profileId?: string }> {
+  try {
+    const guestEmail = `guest_${Date.now()}@example.com`
+    const guestPassword = `guest_${Math.random().toString(36).slice(2)}`
+    
+    const user = await prisma.user.create({
+      data: { email: guestEmail, password: guestPassword },
+    })
+
+    const cookieStore = await cookies()
+    cookieStore.set("userId", user.id, { path: "/", maxAge: 31536000 })
+    
+    const profile = await prisma.profile.create({
+      data: { userId: user.id, name: "Guest", pin: null },
+    })
+
+    await prisma.category.createMany({
+      data: DEFAULT_CATEGORIES.map((cat) => ({
+        profileId: profile.id,
+        name: cat.name,
+        icon: cat.icon,
+        isDefault: true,
+      })),
+      skipDuplicates: true,
+    })
+
+    await prisma.settings.create({
+      data: {
+        id: profile.id,
+        currencyCode: "USD",
+        updatedAt: new Date(),
+      },
+    })
+
+    cookieStore.set("profileId", profile.id, { path: "/", maxAge: 31536000 })
+    return { success: true, profileId: profile.id }
+  } catch (error) {
+    console.error("Guest login error:", error)
+    return { success: false, error: "Failed to continue as guest" }
+  }
+}

@@ -8,6 +8,7 @@ import {
   getUserProfiles,
   createProfile,
   switchProfile,
+  continueAsGuest,
 } from "@/lib/actions/auth-actions"
 
 interface AuthGateProps {
@@ -94,6 +95,24 @@ export function AuthGate({ initialUserId, initialProfileId, children }: AuthGate
         window.location.reload()
       } else {
         setError(result.error || "Authentication failed")
+      }
+    } catch {
+      setError("Something went wrong.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleGuestLogin() {
+    setLoading(true)
+    setError("")
+    try {
+      const result = await continueAsGuest()
+      if (result.success && result.profileId) {
+        sessionStorage.setItem(`profileAuth_${result.profileId}`, "true")
+        window.location.reload()
+      } else {
+        setError(result.error || "Failed to continue as guest")
       }
     } catch {
       setError("Something went wrong.")
@@ -246,6 +265,23 @@ export function AuthGate({ initialUserId, initialProfileId, children }: AuthGate
               className="w-full text-sm text-muted-foreground hover:text-primary transition-colors text-center py-1"
             >
               {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Log In"}
+            </button>
+            
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground rounded-full">Or</span>
+              </div>
+            </div>
+            
+            <button
+              onClick={handleGuestLogin}
+              disabled={loading}
+              className="w-full py-3.5 rounded-2xl bg-secondary text-foreground font-semibold text-sm hover:bg-secondary/80 disabled:opacity-50 border border-border"
+            >
+              Continue as Guest
             </button>
           </div>
         </div>
