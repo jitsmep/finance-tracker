@@ -46,3 +46,10 @@ export async function updateSettings(data: FormData) {
   const currencyCode = data.get("currencyCode") as string
   return updateCurrency(currencyCode)
 }
+
+export async function updateNavLayout(layout: string) {
+  const cookieStore = await cookies()
+  cookieStore.set("nav_layout", layout, { path: "/", maxAge: 31536000 })
+  revalidatePath("/")
+  return { success: true }
+}

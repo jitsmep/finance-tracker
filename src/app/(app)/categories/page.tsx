@@ -38,9 +38,7 @@ export default async function CategoriesPage() {
                 {cat.isDefault && (
                   <Badge variant="secondary" className="text-xs">Default</Badge>
                 )}
-                {!cat.isDefault && (
-                  <CategoryActions categoryId={cat.id} />
-                )}
+                <CategoryActions categoryId={cat.id} initialName={cat.name} initialIcon={cat.icon} />
               </div>
             </CardContent>
           </Card>

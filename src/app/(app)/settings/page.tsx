@@ -1,7 +1,11 @@
 import { getSettings, updateCurrency } from "@/lib/actions/settings";
+import { getUserEmail } from "@/lib/actions/auth-actions";
 import { revalidatePath } from "next/cache";
 import { ThemeSettings } from "@/components/ThemeSettings";
+import { NavLayoutSettings } from "@/components/NavLayoutSettings";
 import { ChangePinForm } from "@/components/ChangePinForm";
+import { ChangeEmailForm } from "@/components/ChangeEmailForm";
+import { cookies } from "next/headers";
 import { ExportData } from "@/components/export-data";
 import { Settings2, Palette, Database, Info, Globe } from "lucide-react";
 
@@ -9,6 +13,9 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const settings = await getSettings();
+  const userEmail = await getUserEmail();
+  const cookieStore = await cookies();
+  const navLayout = cookieStore.get("nav_layout")?.value || "sidebar";
 
   async function handleUpdateCurrency(formData: FormData) {
     "use server";
@@ -72,16 +79,22 @@ export default async function SettingsPage() {
         </div>
       </section>
 
-      {/* ── SECTION 2: APPEARANCE ── */}
+      {/* ── SECTION 2: APPEARANCE & LAYOUT ── */}
       <section className="space-y-3">
-        <SectionHeader icon={<Palette className="w-4 h-4" />} label="Appearance" />
-        <ThemeSettings />
+        <SectionHeader icon={<Palette className="w-4 h-4" />} label="Appearance & Layout" />
+        <div className="space-y-4">
+          <ThemeSettings />
+          <NavLayoutSettings initialLayout={navLayout} />
+        </div>
       </section>
 
-      {/* ── SECTION 3: SECURITY ── */}
+      {/* ── SECTION 3: SECURITY & ACCOUNT ── */}
       <section className="space-y-3">
-        <SectionHeader icon={<span className="text-sm">🔐</span>} label="Security" />
-        <ChangePinForm />
+        <SectionHeader icon={<span className="text-sm">🔐</span>} label="Security & Account" />
+        <div className="space-y-4">
+          <ChangeEmailForm initialEmail={userEmail} />
+          <ChangePinForm />
+        </div>
       </section>
 
       {/* ── SECTION 4: DATA MANAGEMENT ── */}

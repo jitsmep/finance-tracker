@@ -198,3 +198,43 @@ export async function continueAsGuest(): Promise<{ success: boolean; error?: str
     return { success: false, error: "Failed to continue as guest" }
   }
 }
+
+export async function getUserEmail(): Promise<string | null> {
+  const cookieStore = await cookies()
+  const userId = cookieStore.get("userId")?.value
+  if (!userId) return null
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true }
+  })
+
+  return user?.email || null
+}
+
+export async function updateUserEmail(newEmail: string): Promise<{ success: boolean; error?: string }> {
+  const cookieStore = await cookies()
+  const userId = cookieStore.get("userId")?.value
+  if (!userId) return { success: false, error: "Not authenticated" }
+
+  if (!newEmail || !newEmail.includes("@")) {
+    return { success: false, error: "Invalid email address" }
+  }
+
+  try {
+    const existing = await prisma.user.findUnique({ where: { email: newEmail } })
+    if (existing && existing.id !== userId) {
+      return { success: false, error: "Email already in use" }
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { email: newEmail },
+    })
+
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: "Failed to update email" }
+  }
+}
+
