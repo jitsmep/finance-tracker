@@ -8,12 +8,12 @@ import { cookies } from "next/headers"
 // 🚀 Read the unique locker ID from the cookie!
 async function getLockerId() {
   const cookieStore = await cookies();
-  return cookieStore.get("deviceId")?.value || "system-default";
+  return cookieStore.get("profileId")?.value || "system-default";
 }
 
 export async function getTransactions(filters?: any) {
   const currentDeviceId = await getLockerId();
-  const where: any = { deviceId: currentDeviceId }
+  const where: any = { profileId: currentDeviceId }
 
   if (filters?.type && filters.type !== "all") where.type = filters.type
   if (filters?.categoryId && filters.categoryId !== "all") where.categoryId = filters.categoryId
@@ -52,7 +52,7 @@ export async function createTransaction(data: FormData) {
       date: parsed.data.date,
       note: parsed.data.note ?? null,
       categoryId: parsed.data.categoryId,
-      deviceId: currentDeviceId 
+      profileId: currentDeviceId 
     } 
   })
   
@@ -109,7 +109,7 @@ export async function getTransactionStats(month?: number, year?: number) {
   const endDate = new Date(y, m, 0, 23, 59, 59)
 
   const transactions = await prisma.transaction.findMany({
-    where: { deviceId: currentDeviceId, date: { gte: startDate, lte: endDate } },
+    where: { profileId: currentDeviceId, date: { gte: startDate, lte: endDate } },
     include: { category: true },
   })
 
@@ -140,7 +140,7 @@ export async function getMonthlyTrends(months: number = 6) {
     const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59)
 
     const transactions = await prisma.transaction.findMany({
-      where: { deviceId: currentDeviceId, date: { gte: startDate, lte: endDate } },
+      where: { profileId: currentDeviceId, date: { gte: startDate, lte: endDate } },
     })
 
     const income = transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)

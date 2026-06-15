@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   if (id) {
     // 🚀 Securely set the cookie in an API Route
     const cookieStore = await cookies();
-    cookieStore.set("deviceId", id, { path: "/", maxAge: 31536000 });
+    cookieStore.set("profileId", id, { path: "/", maxAge: 31536000 });
     
     // Send the user back to the dashboard!
     redirect("/");

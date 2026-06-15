@@ -8,15 +8,15 @@ import { cookies } from "next/headers"
 // Read the unique locker ID from the cookie
 async function getLockerId() {
   const cookieStore = await cookies();
-  return cookieStore.get("deviceId")?.value || "system-default";
+  return cookieStore.get("profileId")?.value || "system-default";
 }
 
 export async function getCategories() {
-  const deviceId = await getLockerId();
-  if (!deviceId || deviceId === "system-default") return []
+  const profileId = await getLockerId();
+  if (!profileId || profileId === "system-default") return []
 
   return prisma.category.findMany({
-    where: { deviceId },
+    where: { profileId },
     orderBy: { name: "asc" },
     include: {
       _count: { select: { transactions: true, budgets: true } },
@@ -25,8 +25,8 @@ export async function getCategories() {
 }
 
 export async function createCategory(data: FormData) {
-  const deviceId = await getLockerId();
-  if (!deviceId || deviceId === "system-default") return { error: { deviceId: ["Device not found"] } }
+  const profileId = await getLockerId();
+  if (!profileId || profileId === "system-default") return { error: { profileId: ["Device not found"] } }
 
   const raw = {
     name: data.get("name"),
@@ -38,14 +38,14 @@ export async function createCategory(data: FormData) {
 
   const existing = await prisma.category.findUnique({
     where: {
-      deviceId_name: { deviceId, name: parsed.data.name },
+      profileId_name: { profileId, name: parsed.data.name },
     },
   })
 
   if (existing) return { error: { name: ["Category already exists"] } }
 
   await prisma.category.create({
-    data: { ...parsed.data, isDefault: false, deviceId },
+    data: { ...parsed.data, isDefault: false, profileId },
   })
 
   revalidatePath("/")
@@ -56,14 +56,14 @@ export async function createCategory(data: FormData) {
 }
 
 export async function deleteCategory(id: string) {
-  const deviceId = await getLockerId();
-  if (!deviceId || deviceId === "system-default") return { error: "Device not found" }
+  const profileId = await getLockerId();
+  if (!profileId || profileId === "system-default") return { error: "Device not found" }
 
-  const category = await prisma.category.findFirst({ where: { id, deviceId } })
+  const category = await prisma.category.findFirst({ where: { id, profileId } })
   if (!category) return { error: "Category not found" }
   if (category.isDefault) return { error: "Cannot delete default categories" }
 
-  const txCount = await prisma.transaction.count({ where: { categoryId: id, deviceId } })
+  const txCount = await prisma.transaction.count({ where: { categoryId: id, profileId } })
   if (txCount > 0) return { error: `Cannot delete: ${txCount} transactions use this category` }
 
   await prisma.category.delete({ where: { id } })

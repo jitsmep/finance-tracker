@@ -4,14 +4,14 @@ import { cookies } from "next/headers";
 
 export async function GET() {
   const cookieStore = await cookies();
-  const deviceId = cookieStore.get("deviceId")?.value;
+  const profileId = cookieStore.get("profileId")?.value;
 
-  if (!deviceId) {
+  if (!profileId) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
   const transactions = await prisma.transaction.findMany({
-    where: { deviceId },
+    where: { profileId },
     include: { category: true },
     orderBy: { date: "desc" },
   });

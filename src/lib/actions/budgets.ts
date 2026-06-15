@@ -8,19 +8,19 @@ import { cookies } from "next/headers"
 // Read the unique locker ID from the cookie
 async function getLockerId() {
   const cookieStore = await cookies();
-  return cookieStore.get("deviceId")?.value || "system-default";
+  return cookieStore.get("profileId")?.value || "system-default";
 }
 
 export async function getBudgets(month?: number, year?: number) {
-  const deviceId = await getLockerId();
-  if (!deviceId || deviceId === "system-default") return []
+  const profileId = await getLockerId();
+  if (!profileId || profileId === "system-default") return []
 
   const now = new Date()
   const m = month ?? now.getMonth() + 1
   const y = year ?? now.getFullYear()
 
   const budgets = await prisma.budget.findMany({
-    where: { deviceId, month: m, year: y },
+    where: { profileId, month: m, year: y },
     include: { category: true },
   })
 
@@ -31,7 +31,7 @@ export async function getBudgets(month?: number, year?: number) {
     budgets.map(async (budget) => {
       const spent = await prisma.transaction.aggregate({
         where: {
-          deviceId,
+          profileId,
           categoryId: budget.categoryId,
           type: "expense",
           date: { gte: startDate, lte: endDate },
@@ -53,8 +53,8 @@ export async function getBudgets(month?: number, year?: number) {
 }
 
 export async function upsertBudget(data: FormData) {
-  const deviceId = await getLockerId();
-  if (!deviceId || deviceId === "system-default") return { error: { deviceId: ["Device not found"] } }
+  const profileId = await getLockerId();
+  if (!profileId || profileId === "system-default") return { error: { profileId: ["Device not found"] } }
 
   const raw = {
     limit: data.get("limit"),
@@ -68,7 +68,7 @@ export async function upsertBudget(data: FormData) {
 
   const existingBudget = await prisma.budget.findFirst({
     where: {
-      deviceId,
+      profileId,
       categoryId: parsed.data.categoryId,
       month: parsed.data.month,
       year: parsed.data.year,
@@ -82,7 +82,7 @@ export async function upsertBudget(data: FormData) {
     })
   } else {
     await prisma.budget.create({
-      data: { ...parsed.data, deviceId },
+      data: { ...parsed.data, profileId },
     })
   }
 
@@ -92,10 +92,10 @@ export async function upsertBudget(data: FormData) {
 }
 
 export async function deleteBudget(id: string) {
-  const deviceId = await getLockerId();
-  if (!deviceId || deviceId === "system-default") return { error: "Device not found" }
+  const profileId = await getLockerId();
+  if (!profileId || profileId === "system-default") return { error: "Device not found" }
 
-  await prisma.budget.deleteMany({ where: { id, deviceId } })
+  await prisma.budget.deleteMany({ where: { id, profileId } })
 
   revalidatePath("/")
   revalidatePath("/budgets")

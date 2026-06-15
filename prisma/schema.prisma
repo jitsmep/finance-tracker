@@ -7,15 +7,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Device {
-  id        String   @id @default(cuid())
-  pin       String   // hashed PIN
-  createdAt DateTime @default(now())
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  password  String
+  profiles  Profile[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Profile {
+  id             String           @id @default(cuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  pin            String?          // Optional PIN for profile
+  categories     Category[]
+  transactions   Transaction[]
+  budgets        Budget[]
+  settings       Settings?
+  assets         Asset[]
+  liabilities    Liability[]
+  stockPortfolio StockPortfolio[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 }
 
 model Category {
   id           String        @id @default(cuid())
-  deviceId     String
+  profileId    String
+  profile      Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
   name         String
   icon         String        @default("📌")
   isDefault    Boolean       @default(false)
@@ -23,12 +44,13 @@ model Category {
   transactions Transaction[]
   budgets      Budget[]
 
-  @@unique([deviceId, name])
+  @@unique([profileId, name])
 }
 
 model Transaction {
   id         String   @id @default(cuid())
-  deviceId   String
+  profileId  String
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
   type       String   // "income" | "expense"
   amount     Float
   date       DateTime
@@ -41,7 +63,8 @@ model Transaction {
 
 model Budget {
   id         String   @id @default(cuid())
-  deviceId   String
+  profileId  String
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
   month      Int
   year       Int
   limit      Float
@@ -50,18 +73,20 @@ model Budget {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@unique([deviceId, categoryId, month, year])
+  @@unique([profileId, categoryId, month, year])
 }
 
 model Settings {
-  id           String   @id // deviceId is the id
+  id           String   @id // profileId is the id
+  profile      Profile  @relation(fields: [id], references: [id], onDelete: Cascade)
   currencyCode String   @default("USD")
   updatedAt    DateTime @updatedAt
 }
 
 model Asset {
   id        String   @id @default(cuid())
-  deviceId  String
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
   name      String
   value     Float
   type      String
@@ -71,7 +96,8 @@ model Asset {
 
 model Liability {
   id        String   @id @default(cuid())
-  deviceId  String
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
   name      String
   amount    Float
   interest  Float?
@@ -81,7 +107,8 @@ model Liability {
 
 model StockPortfolio {
   id        String   @id @default(cuid())
-  deviceId  String
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
   ticker    String
   shares    Float
   buyPrice  Float

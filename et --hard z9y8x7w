@@ -1,0 +1,104 @@
+[33m9a7a5ad[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Fix login button bug and update readme
+[33mf9ef71a[m Fix login button bug and update readme
+[33mbd5a581[m Fix login button bug and update readme
+[33mb1fcc0d[m Update pin-gate.tsx
+[33m78f3bc0[m Create page.tsx
+[33m8db4d8c[m Update sidebar.tsx
+[33m4e700e2[m Update device-actions.ts
+[33mb9804a7[m Update device-actions.ts
+[33mf9c0aa7[m Update sidebar.tsx
+[33m4997012[m Update sidebar.tsx
+[33mce2e58f[m Update device-actions.ts
+[33mda7b5af[m Update sidebar.tsx
+[33m276245d[m Update device-actions.ts
+[33m7353292[m Update category-actions.ts
+[33mb511138[m Update page.tsx
+[33mbf5fa51[m Create category-actions.ts
+[33m5b569ec[m Update device-actions.ts
+[33me23113e[m Update pin-gate.tsx
+[33m65d00fa[m Update pin-gate.tsx
+[33m9c878fd[m Update eslint.config.mjs
+[33m8a33442[m Update device-actions.ts
+[33mbc8b21c[m Update page.tsx
+[33m703af58[m Update device-actions.ts
+[33m18f9bed[m Create ProfileManager.tsx
+[33mb1a1e2a[m Update sidebar.tsx
+[33mb5f4492[m Update pin-gate.tsx
+[33m7b779c4[m Update device.ts
+[33m27ddb63[m Create page.tsx
+[33mfcf464d[m Update and rename page.tsx to route.ts
+[33ma44d608[m Update utils.ts
+[33ma0e6e49[m Create page.tsx
+[33m3448ec7[m Update page.tsx
+[33me75d9f2[m Update utils.ts
+[33me5f99da[m Pushing all updated files and folders
+[33m0b2674b[m Pushing all updated files and folders
+[33m7ce8875[m Pushing all updated files and folders
+[33m7721cdb[m Pushing all updated files and folders
+[33m48add37[m Update transactions.ts
+[33m95b7843[m Update transactions.ts
+[33m2635666[m Update device-actions.ts
+[33mc95f43f[m Update settings.ts
+[33m71a1be5[m Update categories.ts
+[33m8820ae7[m Update budgets.ts
+[33m3803e7c[m Update transactions.ts
+[33m569ed9a[m Update settings.ts
+[33m656f677[m Update package.json
+[33m46c23cd[m Update package.json
+[33m38ff5ce[m Update package.json
+[33medf8bc9[m Update settings.ts
+[33m2fe1800[m Update package.json
+[33m46db951[m Update package.json
+[33m2ca3025[m Update device-actions.ts
+[33m3535c45[m Update pin-gate.tsx
+[33mda205b7[m Update device-actions.ts
+[33m098bf65[m Update page.tsx
+[33mbe76469[m Update transactions.ts
+[33m679d76c[m Update budgets.ts
+[33me06098f[m Update categories.ts
+[33mb7187af[m Update page.tsx
+[33mc04fcf2[m Update page.tsx
+[33mb2b45e1[m Update seed.ts
+[33m3bc23b4[m Create db.ts
+[33m18c8875[m Update layout.tsx
+[33mbc07cb4[m Create pin-gate.tsx
+[33mc1cb3a3[m Create device-actions.ts
+[33m298882b[m Create device.ts
+[33m19e165d[m Update schema.prisma
+[33ma8c277a[m Update sidebar.tsx
+[33m6d44338[m Update layout.tsx
+[33m8419caa[m Create FinanceProvider.tsx
+[33mf58759b[m Update category-actions.tsx
+[33ma3c3599[m Update page.tsx
+[33mae4ece9[m Update page.tsx
+[33m02df528[m Update page.tsx
+[33m0acb3de[m Update page.tsx
+[33m1bb592a[m Update layout.tsx
+[33mf5cff0b[m Update sidebar.tsx
+[33m8f82668[m Update globals.css
+[33mfc230b9[m Update page.tsx
+[33m50d6aab[m Create ThemeSettings.tsx
+[33m65f335b[m Create ThemeToggle.tsx
+[33m2767270[m Update layout.tsx
+[33m33f1a6b[m Create ThemeProvider.tsx
+[33m0732c5e[m Update globals.css
+[33m8ec0d7c[m Update page.tsx
+[33mab428eb[m Update page.tsx
+[33m62fe0e7[m Create page.tsx
+[33m6762e4f[m Update schema.prisma
+[33m93bc353[m Create .env
+[33m62a3b5f[m Update schema.prisma
+[33mfe97f07[m Delete package-lock.json
+[33mf1b0920[m Update package.json
+[33m2981ee8[m Update schema.prisma
+[33m267adef[m Update page.tsx
+[33me8dddae[m Update package.json
+[33m27884ab[m Update layout.tsx
+[33m849b5e9[m Update page.tsx
+[33mdf03a0c[m Update page.tsx
+[33m6179f55[m Update page.tsx
+[33mcdfccf0[m Update page.tsx
+[33m0d67c31[m Update package.json
+[33md10cf76[m fix: switch to PostgreSQL for Vercel deployment
+[33m0db2d0d[m Delete src/app/(app)/page.tsx
+[33mca50ef5[m Initial commit: Clean full-stack code

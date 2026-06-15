@@ -7,18 +7,18 @@ import { cookies } from "next/headers"
 // Read the unique locker ID from the cookie
 async function getLockerId() {
   const cookieStore = await cookies();
-  return cookieStore.get("deviceId")?.value || "system-default";
+  return cookieStore.get("profileId")?.value || "system-default";
 }
 
 export async function getSettings() {
-  const deviceId = await getLockerId();
-  if (!deviceId || deviceId === "system-default") return { id: "", currencyCode: "USD", updatedAt: new Date() }
+  const profileId = await getLockerId();
+  if (!profileId || profileId === "system-default") return { id: "", currencyCode: "USD", updatedAt: new Date() }
 
-  let settings = await prisma.settings.findUnique({ where: { id: deviceId } })
+  let settings = await prisma.settings.findUnique({ where: { id: profileId } })
 
   if (!settings) {
     settings = await prisma.settings.create({
-      data: { id: deviceId, currencyCode: "USD" },
+      data: { id: profileId, currencyCode: "USD" },
     })
   }
 
@@ -26,14 +26,14 @@ export async function getSettings() {
 }
 
 export async function updateCurrency(currencyCode: string) {
-  const deviceId = await getLockerId();
-  if (!deviceId || deviceId === "system-default") return { error: "Device not found" }
+  const profileId = await getLockerId();
+  if (!profileId || profileId === "system-default") return { error: "Device not found" }
   if (!currencyCode) return { error: "Currency code is required" }
 
   await prisma.settings.upsert({
-    where: { id: deviceId },
+    where: { id: profileId },
     update: { currencyCode },
-    create: { id: deviceId, currencyCode },
+    create: { id: profileId, currencyCode },
   })
 
   revalidatePath("/")
