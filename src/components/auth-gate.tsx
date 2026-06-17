@@ -10,6 +10,7 @@ import {
   switchProfile,
   continueAsGuest,
 } from "@/lib/actions/auth-actions"
+import { Eye, EyeOff } from "lucide-react"
 
 interface AuthGateProps {
   initialUserId: string | null
@@ -33,6 +34,7 @@ export function AuthGate({ initialUserId, initialProfileId, children }: AuthGate
   
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   
@@ -245,13 +247,22 @@ export function AuthGate({ initialUserId, initialProfileId, children }: AuthGate
               placeholder="Email address"
               className="w-full p-3 rounded-xl bg-secondary/60 border border-border focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="w-full p-3 rounded-xl bg-secondary/60 border border-border focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                className="w-full p-3 pr-10 rounded-xl bg-secondary/60 border border-border focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
             {error && <p className="text-xs text-destructive text-center">{error}</p>}
             <button
               onClick={() => handleAuth(isLogin ? "login" : "signup")}

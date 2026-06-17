@@ -17,11 +17,12 @@ const DEFAULT_CATEGORIES = [
 
 export async function signUp(email: string, password: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const existing = await prisma.user.findUnique({ where: { email } })
+    const normalizedEmail = email.toLowerCase().trim()
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } })
     if (existing) return { success: false, error: "Email already in use" }
 
     const user = await prisma.user.create({
-      data: { email, password },
+      data: { email: normalizedEmail, password },
     })
 
     const cookieStore = await cookies()
@@ -34,7 +35,8 @@ export async function signUp(email: string, password: string): Promise<{ success
 
 export async function login(email: string, password: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await prisma.user.findUnique({ where: { email } })
+    const normalizedEmail = email.toLowerCase().trim()
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } })
     if (!user || user.password !== password) {
       return { success: false, error: "Invalid email or password" }
     }
