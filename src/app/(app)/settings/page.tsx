@@ -8,6 +8,7 @@ import { ChangeEmailForm } from "@/components/ChangeEmailForm";
 import { cookies } from "next/headers";
 import { ExportData } from "@/components/export-data";
 import { Settings2, Palette, Database, Info, Globe } from "lucide-react";
+import { LogoutButton } from "@/components/LogoutButton";
 
 export const dynamic = "force-dynamic";
 
@@ -94,6 +95,7 @@ export default async function SettingsPage() {
         <div className="space-y-4">
           <ChangeEmailForm initialEmail={userEmail} />
           <ChangePinForm />
+          <LogoutButton />
         </div>
       </section>
 
