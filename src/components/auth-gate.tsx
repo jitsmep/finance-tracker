@@ -9,6 +9,9 @@ import {
   createProfile,
   switchProfile,
   continueAsGuest,
+  requestOtp,
+  verifyOtpAndReset,
+  registerDevice,
 } from "@/lib/actions/auth-actions"
 import { Eye, EyeOff } from "lucide-react"
 
@@ -26,6 +29,9 @@ type Mode =
   | "create-profile"
   | "enter-pin"
   | "authenticated"
+  | "forgot-password"
+  | "enter-otp"
+  | "sync-device"
 
 export function AuthGate({ initialUserId, initialProfileId, children }: AuthGateProps) {
   const [mode, setMode] = useState<Mode>("loading")
@@ -35,6 +41,9 @@ export function AuthGate({ initialUserId, initialProfileId, children }: AuthGate
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [otp, setOtp] = useState("")
+  const [deviceId, setDeviceId] = useState<string>("")
+  const [newPassword, setNewPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   
@@ -118,6 +127,48 @@ export function AuthGate({ initialUserId, initialProfileId, children }: AuthGate
       }
     } catch {
       setError("Something went wrong.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleRequestOtp() {
+    if (!email) {
+      setError("Please enter your email")
+      return
+    }
+    setLoading(true)
+    setError("")
+    try {
+      const res = await requestOtp(email)
+      if (res.success) {
+        setMode("enter-otp")
+      } else {
+        setError(res.error || "Failed to send OTP")
+      }
+    } catch {
+      setError("Something went wrong")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleVerifyOtpAndReset() {
+    if (!otp || otp.length !== 4) {
+      setError("Please enter a valid 4-digit OTP")
+      return
+    }
+    setLoading(true)
+    setError("")
+    try {
+      const res = await verifyOtpAndReset(email, otp, newPassword || undefined)
+      if (res.success) {
+        window.location.reload()
+      } else {
+        setError(res.error || "Failed to verify OTP")
+      }
+    } catch {
+      setError("Something went wrong")
     } finally {
       setLoading(false)
     }
@@ -220,7 +271,59 @@ export function AuthGate({ initialUserId, initialProfileId, children }: AuthGate
   }
 
   if (mode === "authenticated") {
-    return <>{children}</>
+    return (
+      <>
+        {children}
+        <div className="mt-8 p-4 border-t border-border text-center">
+          <button
+            onClick={() => {
+              // generate a UUID for the device
+              const id = crypto.randomUUID()
+              setDeviceId(id)
+              setMode("sync-device")
+            }}
+            className="text-sm text-primary hover:underline"
+          >
+            Sync data to another device
+          </button>
+        </div>
+      </>
+    )
+  }
+
+  if (mode === "sync-device") {
+    return (
+      <div className="min-h-screen flex items-center justify-center pin-gate-bg p-4">
+        <div className="w-full max-w-sm animate-pin-slide-up pin-gate-card rounded-3xl p-8 space-y-6">
+          <h1 className="text-2xl font-bold text-center">Device Sync</h1>
+          <p className="text-center text-sm text-muted-foreground">Share this link with the other device to sync your data.</p>
+          <div className="bg-secondary/20 p-4 rounded-xl break-all text-center select-all">
+            {`${window.location.origin}/sync?deviceId=${deviceId}`}
+          </div>
+          <button
+            onClick={async () => {
+              const res = await registerDevice(deviceId)
+              if (res.success) {
+                setError("Device registered successfully!")
+                setMode("authenticated")
+              } else {
+                setError(res.error || "Failed to register device")
+              }
+            }}
+            disabled={loading}
+            className="w-full py-3 rounded-2xl bg-primary text-primary-foreground font-bold mt-4"
+          >
+            Register Device
+          </button>
+          <button
+            onClick={() => setMode("authenticated")}
+            className="w-full py-2 text-sm text-muted-foreground mt-2"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (mode === "login" || mode === "signup") {
@@ -277,6 +380,14 @@ export function AuthGate({ initialUserId, initialProfileId, children }: AuthGate
             >
               {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Log In"}
             </button>
+            {isLogin && (
+              <button
+                onClick={() => { setMode("forgot-password"); setError("") }}
+                className="w-full text-sm text-primary hover:opacity-80 transition-colors text-center py-1 font-medium"
+              >
+                Forgot Password?
+              </button>
+            )}
             
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
@@ -293,6 +404,81 @@ export function AuthGate({ initialUserId, initialProfileId, children }: AuthGate
               className="w-full py-3.5 rounded-2xl bg-secondary text-foreground font-semibold text-sm hover:bg-secondary/80 disabled:opacity-50 border border-border"
             >
               Continue as Guest
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (mode === "forgot-password" || mode === "enter-otp") {
+    const isEnterOtp = mode === "enter-otp"
+    return (
+      <div className="min-h-screen flex items-center justify-center pin-gate-bg p-4">
+        <div className="w-full max-w-sm animate-pin-slide-up pin-gate-card rounded-3xl p-8 space-y-6">
+          <div className="flex justify-center">
+            <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center text-3xl shadow-lg shadow-primary/20">
+              {isEnterOtp ? "🔐" : "✉️"}
+            </div>
+          </div>
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-bold">{isEnterOtp ? "Enter OTP" : "Reset Password"}</h1>
+            <p className="text-sm text-muted-foreground">
+              {isEnterOtp ? `Sent to ${email}` : "Enter your email to receive a 4-digit code"}
+            </p>
+          </div>
+          <div className="space-y-4">
+            {!isEnterOtp ? (
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email address"
+                className="w-full p-3 rounded-xl bg-secondary/60 border border-border focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+            ) : (
+              <>
+                <input
+                  type="text"
+                  maxLength={4}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  placeholder="4-digit OTP"
+                  className="w-full p-3 rounded-xl bg-secondary/60 border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 text-center tracking-[1em] font-bold"
+                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="New Password (optional)"
+                    className="w-full p-3 pr-10 rounded-xl bg-secondary/60 border border-border focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {error && <p className="text-xs text-destructive text-center">{error}</p>}
+            
+            <button
+              onClick={isEnterOtp ? handleVerifyOtpAndReset : handleRequestOtp}
+              disabled={loading || (isEnterOtp && otp.length !== 4) || (!isEnterOtp && !email)}
+              className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-bold text-sm hover:opacity-90 disabled:opacity-50"
+            >
+              {loading ? "..." : (isEnterOtp ? "Login / Reset" : "Send OTP")}
+            </button>
+            <button
+              onClick={() => { setMode("login"); setError(""); setOtp(""); setNewPassword("") }}
+              className="w-full text-sm text-muted-foreground hover:text-primary transition-colors text-center py-1"
+            >
+              Back to Login
             </button>
           </div>
         </div>

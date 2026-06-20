@@ -14,6 +14,9 @@ export async function getSettings() {
   const profileId = await getLockerId();
   if (!profileId || profileId === "system-default") return { id: "", currencyCode: "USD", updatedAt: new Date() }
 
+  const profile = await prisma.profile.findUnique({ where: { id: profileId } })
+  if (!profile) return { id: "", currencyCode: "USD", updatedAt: new Date() }
+
   let settings = await prisma.settings.findUnique({ where: { id: profileId } })
 
   if (!settings) {
