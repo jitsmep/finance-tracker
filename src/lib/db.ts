@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { Pool, neonConfig } from "@neondatabase/serverless";
+import { neonConfig } from "@neondatabase/serverless";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import ws from "ws";
 
@@ -15,9 +15,7 @@ const createPrismaClient = () => {
       // In build-time environments without DATABASE_URL, this prevents crashing immediately
       return new PrismaClient();
   }
-  const pool = new Pool({ connectionString });
-  // @ts-expect-error TypeScript pool version mismatch between Neon and Prisma Adapter
-  const adapter = new PrismaNeon(pool);
+  const adapter = new PrismaNeon({ connectionString });
 
   return new PrismaClient({ adapter });
 };
