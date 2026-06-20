@@ -16,6 +16,7 @@ const createPrismaClient = () => {
       return new PrismaClient();
   }
   const pool = new Pool({ connectionString });
+  // @ts-expect-error TypeScript pool version mismatch between Neon and Prisma Adapter
   const adapter = new PrismaNeon(pool);
 
   return new PrismaClient({ adapter });
