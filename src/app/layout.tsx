@@ -38,8 +38,6 @@ export default async function RootLayout({
             <AuthGate>
               {children}
             </AuthGate>
-            {children}
-          </AuthGate>
         </ThemeProvider>
       </body>
     </html>
