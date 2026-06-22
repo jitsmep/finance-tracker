@@ -35,7 +35,9 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthGate initialUserId={userId} initialProfileId={profileId}>
+            <AuthGate>
+              {children}
+            </AuthGate>
             {children}
           </AuthGate>
         </ThemeProvider>
