@@ -10,6 +10,7 @@ import {
   Settings,
   TrendingUp,
   Wallet,
+  Smartphone,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/budgets",       label: "Budgets",      icon: PieChart,        emoji: "🎯" },
   { href: "/analytics",     label: "Analytics",    icon: TrendingUp,      emoji: "🔥" },
   { href: "/categories",    label: "Categories",   icon: Tag,             emoji: "🏷️" },
+  { href: "/link",          label: "Link Devices", icon: Smartphone,      emoji: "📱" },
   { href: "/settings",      label: "Settings",     icon: Settings,        emoji: "⚙️" },
 ]
 

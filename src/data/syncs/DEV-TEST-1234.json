@@ -1,0 +1,22 @@
+{
+  "categories": [
+    {
+      "icon": "??",
+      "isDefault": true,
+      "name": "Test Income",
+      "id": "cat-1"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "tx-1",
+      "categoryId": "cat-1",
+      "amount": 100,
+      "note": "Test",
+      "type": "income",
+      "date": "2026-06-23"
+    }
+  ],
+  "currency": "USD",
+  "updatedAt": "2026-06-23T05:31:23.920Z"
+}

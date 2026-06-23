@@ -1,0 +1,79 @@
+{
+  "categories": [
+    {
+      "id": "cat-1",
+      "name": "Salary",
+      "icon": "💰",
+      "isDefault": true
+    },
+    {
+      "id": "cat-2",
+      "name": "Groceries",
+      "icon": "🛒",
+      "isDefault": true
+    },
+    {
+      "id": "cat-3",
+      "name": "Rent / EMI",
+      "icon": "🏠",
+      "isDefault": true
+    },
+    {
+      "id": "cat-4",
+      "name": "Petrol & Transit",
+      "icon": "🚗",
+      "isDefault": true
+    },
+    {
+      "id": "cat-5",
+      "name": "Dining Out",
+      "icon": "🍔",
+      "isDefault": true
+    },
+    {
+      "id": "cat-6",
+      "name": "Utilities",
+      "icon": "⚡",
+      "isDefault": true
+    },
+    {
+      "id": "cat-7",
+      "name": "Health",
+      "icon": "💊",
+      "isDefault": true
+    },
+    {
+      "id": "cat-8",
+      "name": "SIP & Invest",
+      "icon": "📈",
+      "isDefault": true
+    },
+    {
+      "id": "cat-9",
+      "name": "Entertainment",
+      "icon": "🎬",
+      "isDefault": true
+    },
+    {
+      "id": "cat-10",
+      "name": "Shopping",
+      "icon": "🛍️",
+      "isDefault": true
+    },
+    {
+      "id": "cat-11",
+      "name": "Education",
+      "icon": "📚",
+      "isDefault": true
+    },
+    {
+      "id": "cat-12",
+      "name": "Travel",
+      "icon": "✈️",
+      "isDefault": true
+    }
+  ],
+  "transactions": [],
+  "currency": "INR",
+  "updatedAt": "2026-06-23T05:32:55.002Z"
+}

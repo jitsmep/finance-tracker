@@ -34,6 +34,12 @@ type FinanceContextType = {
 
   currency: string;
   setCurrency: (code: string) => void;
+
+  deviceId: string;
+  lastSynced: string;
+  isSyncing: boolean;
+  uploadBackup: () => Promise<void>;
+  restoreBackup: (deviceId: string) => Promise<{ success: boolean; error?: string }>;
 };
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
@@ -60,6 +66,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [currency, setCurrencyState] = useState<string>("INR");
+  const [deviceId, setDeviceId] = useState<string>("");
+  const [lastSynced, setLastSynced] = useState<string>("");
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [mounted, setMounted] = useState(false);
 
   // Load from localStorage on mount
@@ -67,20 +76,120 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const savedCats = JSON.parse(localStorage.getItem("finance_categories") || "null");
     const savedTxs  = JSON.parse(localStorage.getItem("finance_transactions") || "[]");
     const savedCur  = localStorage.getItem("finance_currency") || "INR";
+    let savedDevId  = localStorage.getItem("finance_device_id");
+
+    if (!savedDevId) {
+      // Create a nice human readable 12-char device ID like DEV-AAAA-BBBB
+      const rand1 = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const rand2 = Math.random().toString(36).substring(2, 6).toUpperCase();
+      savedDevId = `DEV-${rand1}-${rand2}`;
+      localStorage.setItem("finance_device_id", savedDevId);
+    }
+    // Set cookie for server queries
+    document.cookie = `deviceId=${savedDevId}; path=/; max-age=31536000; SameSite=Lax`;
+
+    const savedSynced = localStorage.getItem("finance_last_synced") || "";
 
     setCategories(savedCats && savedCats.length > 0 ? savedCats : DEFAULT_CATEGORIES);
     setTransactions(savedTxs);
     setCurrencyState(savedCur);
+    setDeviceId(savedDevId);
+    setLastSynced(savedSynced);
     setMounted(true);
   }, []);
 
-  // Persist on change
+  // ── Sync Helpers ───────────────────────────────────────────────────────────
+  const uploadBackup = useCallback(async (
+    currentId = deviceId,
+    cats = categories,
+    txs = transactions,
+    cur = currency
+  ) => {
+    if (!currentId) return;
+    setIsSyncing(true);
+    try {
+      const res = await fetch(`/api/sync?deviceId=${currentId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ categories: cats, transactions: txs, currency: cur }),
+      });
+      if (res.ok) {
+        const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dateStr = `Today at ${now}`;
+        setLastSynced(dateStr);
+        localStorage.setItem("finance_last_synced", dateStr);
+      }
+    } catch (err) {
+      console.error("Auto backup failed:", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [deviceId, categories, transactions, currency]);
+
+  const restoreBackup = useCallback(async (targetDeviceId: string): Promise<{ success: boolean; error?: string }> => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch(`/api/sync?deviceId=${targetDeviceId}`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          return { success: false, error: "Device ID not found. Ensure the other device is connected." };
+        }
+        return { success: false, error: "Failed to connect to sync server." };
+      }
+      const data = await res.json();
+      if (data.error) {
+        return { success: false, error: data.error };
+      }
+
+      // Update state
+      const newCats = data.categories && data.categories.length > 0 ? data.categories : DEFAULT_CATEGORIES;
+      const newTxs = data.transactions || [];
+      const newCur = data.currency || "INR";
+
+      setCategories(newCats);
+      setTransactions(newTxs);
+      setCurrencyState(newCur);
+      setDeviceId(targetDeviceId);
+
+      // Save directly to localStorage
+      localStorage.setItem("finance_categories", JSON.stringify(newCats));
+      localStorage.setItem("finance_transactions", JSON.stringify(newTxs));
+      localStorage.setItem("finance_currency", newCur);
+      localStorage.setItem("finance_device_id", targetDeviceId);
+      
+      // Set the cookie
+      document.cookie = `deviceId=${targetDeviceId}; path=/; max-age=31536000; SameSite=Lax`;
+
+      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const dateStr = `Today at ${now}`;
+      setLastSynced(dateStr);
+      localStorage.setItem("finance_last_synced", dateStr);
+
+      return { success: true };
+    } catch (err: any) {
+      console.error("Restore backup failed:", err);
+      return { success: false, error: err.message || "Failed to restore backup." };
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
+
+  // Persist on change with debounce auto-upload
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || !deviceId) return;
+    
     localStorage.setItem("finance_categories",   JSON.stringify(categories));
     localStorage.setItem("finance_transactions",  JSON.stringify(transactions));
     localStorage.setItem("finance_currency",      currency);
-  }, [categories, transactions, currency, mounted]);
+
+    const timer = setTimeout(() => {
+      uploadBackup(deviceId, categories, transactions, currency);
+    }, 1500); // 1.5s debounce to cluster fast changes
+
+    return () => clearTimeout(timer);
+  }, [categories, transactions, currency, deviceId, mounted, uploadBackup]);
 
   // ── Category helpers ────────────────────────────────────────────────────────
   const addCategory = useCallback((cat: Omit<Category, "id" | "isDefault">): { error?: string } => {
@@ -130,17 +239,23 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center animate-pulse text-muted-foreground">
+      <div className="min-h-screen flex items-center justify-center animate-pulse text-muted-foreground bg-background">
         Loading…
       </div>
     );
   }
+
+  // Create stable upload reference for the context
+  const triggerUpload = () => uploadBackup(deviceId, categories, transactions, currency);
 
   return (
     <FinanceContext.Provider value={{
       categories, setCategories, addCategory, updateCategory, deleteCategory,
       transactions, setTransactions, addTransaction, updateTransaction, deleteTransaction,
       currency, setCurrency,
+      deviceId, lastSynced, isSyncing,
+      uploadBackup: triggerUpload,
+      restoreBackup
     }}>
       {children}
     </FinanceContext.Provider>
