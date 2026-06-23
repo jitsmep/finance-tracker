@@ -22,8 +22,11 @@ const NAV_ITEMS = [
   { href: "/settings",      label: "Settings",     icon: Settings,        emoji: "⚙️" },
 ]
 
+
+
 export function Navigation({ layout = "sidebar" }: { layout?: "sidebar" | "top" | "bottom" }) {
   const pathname = usePathname()
+
 
   // Always render Mobile Bottom Nav (hidden on desktop)
   const mobileNav = (
@@ -106,6 +109,8 @@ export function Navigation({ layout = "sidebar" }: { layout?: "sidebar" | "top" 
                 </Link>
               )
             })}
+
+
           </nav>
 
           {/* Footer */}

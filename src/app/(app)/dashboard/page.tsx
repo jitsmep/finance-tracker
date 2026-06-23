@@ -1,6 +1,6 @@
-export const dynamic = "force-dynamic";
+"use client"
 
-// ... your existing imports and component code continue below
+import { useMemo } from "react"
 import {
   TrendingUp,
   TrendingDown,
@@ -11,34 +11,63 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TransactionForm } from "@/components/transaction-form"
 import { TransactionRow } from "@/components/transaction-row"
-import { getTransactionStats, getMonthlyTrends } from "@/lib/actions/transactions"
-import { getCategories } from "@/lib/actions/categories"
-import { getSettings } from "@/lib/actions/settings"
-import { getBudgets } from "@/lib/actions/budgets"
+import { useFinance } from "@/components/FinanceProvider"
 import { formatCurrency, type CurrencyCode } from "@/lib/utils"
 import { DashboardCharts } from "../dashboard-charts"
 
-export default async function DashboardPage() {
-  const [stats, categories, settings, trends, budgets] = await Promise.all([
-    getTransactionStats(),
-    getCategories(),
-    getSettings(),
-    getMonthlyTrends(6),
-    getBudgets(),
-  ])
+export default function DashboardPage() {
+  const { transactions, categories, currency } = useFinance()
+  const currencyCode = currency as CurrencyCode
 
-  const currency = settings.currencyCode as CurrencyCode
-  const savingsRate = stats.income > 0
-    ? Math.round(((stats.income - stats.expenses) / stats.income) * 100)
-    : 0
+  const categoryMap = useMemo(
+    () => Object.fromEntries(categories.map((c) => [c.id, c])),
+    [categories]
+  )
 
-  const recentTransactions = stats.transactions
+  // All-time stats
+  const income   = transactions.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0)
+  const expenses = transactions.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+  const balance  = income - expenses
+  const savingsRate = income > 0 ? Math.round(((income - expenses) / income) * 100) : 0
+
+  // Last 5 transactions
+  const recentTransactions = [...transactions]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5)
 
-  const categoryData = Object.entries(stats.categorySpending)
-    .map(([name, data]) => ({ name, value: data.amount, icon: data.icon }))
-    .sort((a, b) => b.value - a.value)
+  // Category spending breakdown
+  const categoryData = useMemo(() => {
+    const map: Record<string, { name: string; icon: string; value: number }> = {}
+    transactions
+      .filter(t => t.type === "expense")
+      .forEach(t => {
+        const cat = categoryMap[t.categoryId]
+        const key = cat?.name ?? "Other"
+        if (!map[key]) map[key] = { name: key, icon: cat?.icon ?? "❓", value: 0 }
+        map[key].value += t.amount
+      })
+    return Object.values(map).sort((a, b) => b.value - a.value)
+  }, [transactions, categoryMap])
+
+  // Monthly trends (last 6 months)
+  const trends = useMemo(() => {
+    const results = []
+    const now = new Date()
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      const monthTxs = transactions.filter(t => t.date.startsWith(monthStr))
+      const inc = monthTxs.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0)
+      const exp = monthTxs.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+      results.push({
+        month: d.toLocaleDateString("en-US", { month: "short" }),
+        income: inc,
+        expenses: exp,
+        savings: inc - exp,
+      })
+    }
+    return results
+  }, [transactions])
 
   const now = new Date()
   const monthName = now.toLocaleDateString("en-US", { month: "long", year: "numeric" })
@@ -61,7 +90,7 @@ export default async function DashboardPage() {
           <h2 className="text-xl sm:text-2xl font-bold text-foreground mt-0.5">Overview</h2>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">{monthName}</p>
         </div>
-        <TransactionForm categories={categories} />
+        <TransactionForm />
       </div>
 
       {/* Stats Cards */}
@@ -76,12 +105,12 @@ export default async function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${stats.balance >= 0 ? "text-[oklch(0.696_0.17_162)]" : "text-destructive"}`}>
-              {formatCurrency(stats.balance, currency)}
+            <div className={`text-2xl font-bold ${balance >= 0 ? "text-emerald-500" : "text-destructive"}`}>
+              {formatCurrency(balance, currencyCode)}
             </div>
             <div className="flex items-center gap-1 mt-1">
-              {stats.balance >= 0 ? (
-                <ArrowUpRight className="w-3 h-3 text-[oklch(0.696_0.17_162)]" />
+              {balance >= 0 ? (
+                <ArrowUpRight className="w-3 h-3 text-emerald-500" />
               ) : (
                 <ArrowDownRight className="w-3 h-3 text-destructive" />
               )}
@@ -96,15 +125,15 @@ export default async function DashboardPage() {
         <Card className="glass-card stagger-2 animate-slide-up">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-[oklch(0.696_0.17_162)]" />
+              <TrendingUp className="w-4 h-4 text-emerald-500" />
               Total Income
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[oklch(0.696_0.17_162)]">
-              {formatCurrency(stats.income, currency)}
+            <div className="text-2xl font-bold text-emerald-500">
+              {formatCurrency(income, currencyCode)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">This month</p>
+            <p className="text-xs text-muted-foreground mt-1">All time</p>
           </CardContent>
         </Card>
 
@@ -118,9 +147,9 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">
-              {formatCurrency(stats.expenses, currency)}
+              {formatCurrency(expenses, currencyCode)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">This month</p>
+            <p className="text-xs text-muted-foreground mt-1">All time</p>
           </CardContent>
         </Card>
       </div>
@@ -129,44 +158,8 @@ export default async function DashboardPage() {
       <DashboardCharts
         trends={trends}
         categoryData={categoryData}
-        currency={currency}
+        currency={currencyCode}
       />
-
-      {/* Budget Overview */}
-      {budgets.length > 0 && (
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle className="text-base">Budget Status</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {budgets.slice(0, 4).map((budget) => (
-              <div key={budget.id} className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2">
-                    <span>{budget.category.icon}</span>
-                    <span className="font-medium">{budget.category.name}</span>
-                  </span>
-                  <span className={budget.percentage >= 100 ? "text-destructive font-medium" : "text-muted-foreground"}>
-                    {formatCurrency(budget.spent, currency)} / {formatCurrency(budget.limit, currency)}
-                  </span>
-                </div>
-                <div className="w-full bg-secondary rounded-full h-1.5">
-                  <div
-                    className={`h-1.5 rounded-full animate-progress-fill transition-all ${
-                      budget.percentage >= 100
-                        ? "bg-destructive"
-                        : budget.percentage >= 80
-                        ? "bg-[oklch(0.795_0.184_86)]"
-                        : "bg-primary"
-                    }`}
-                    style={{ width: `${budget.percentage}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Recent Transactions */}
       <Card className="glass-card">
@@ -187,8 +180,8 @@ export default async function DashboardPage() {
               <TransactionRow
                 key={tx.id}
                 transaction={tx}
-                categories={categories}
-                currencyCode={currency}
+                category={categoryMap[tx.categoryId]}
+                currencyCode={currencyCode}
               />
             ))
           )}

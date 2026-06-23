@@ -5,148 +5,170 @@ import { transactionSchema } from "@/lib/validations"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 
-// 🚀 Read the unique locker ID from the cookie!
+// Helper to get the current profile/device ID from cookies
 async function getLockerId() {
-  const cookieStore = await cookies();
-  return cookieStore.get("profileId")?.value || "system-default";
+  const cookieStore = await cookies()
+  return cookieStore.get("profileId")?.value || "system-default"
 }
 
-export async function getTransactions(filters?: any) {
-  const currentDeviceId = await getLockerId();
-  const where: any = { profileId: currentDeviceId }
-
-  if (filters?.type && filters.type !== "all") where.type = filters.type
-  if (filters?.categoryId && filters.categoryId !== "all") where.categoryId = filters.categoryId
-  
-  if (filters?.startDate || filters?.endDate) {
-    where.date = {}
-    if (filters.startDate) where.date.gte = new Date(filters.startDate)
-    if (filters.endDate) where.date.lte = new Date(filters.endDate)
+// Fetch all transactions for the current profile
+export async function getTransactions() {
+  const profileId = await getLockerId()
+  if (!profileId || profileId === "system-default") return []
+  try {
+    return await prisma.transaction.findMany({
+      where: { profileId },
+      orderBy: { date: "desc" },
+    })
+  } catch (e) {
+    console.warn("Failed to fetch transactions, returning empty list", e)
+    return []
   }
-
-  return prisma.transaction.findMany({
-    where,
-    include: { category: true },
-    orderBy: { date: "desc" },
-  })
 }
 
+// Create a new transaction
 export async function createTransaction(data: FormData) {
-  const currentDeviceId = await getLockerId();
+  const profileId = await getLockerId()
+  if (!profileId || profileId === "system-default")
+    return { error: { profileId: ["Device not found"] } }
 
   const raw = {
-    type: data.get("type"),
     amount: data.get("amount"),
-    date: data.get("date"),
-    note: data.get("note") || undefined,
+    type: data.get("type"),
     categoryId: data.get("categoryId"),
+    date: data.get("date"),
+    description: data.get("description"),
   }
-
   const parsed = transactionSchema.safeParse(raw)
   if (!parsed.success) return { error: parsed.error.flatten().fieldErrors }
 
-  await prisma.transaction.create({ 
-    data: { 
-      type: parsed.data.type,
-      amount: parsed.data.amount,
-      date: parsed.data.date,
-      note: parsed.data.note ?? null,
-      categoryId: parsed.data.categoryId,
-      profileId: currentDeviceId 
-    } 
-  })
-  
-  revalidatePath("/")
+  await prisma.transaction.create({ data: { ...parsed.data, profileId } })
+  revalidatePath("/dashboard")
   revalidatePath("/transactions")
-  revalidatePath("/budgets")
   return { success: true }
 }
 
+// Update an existing transaction
 export async function updateTransaction(id: string, data: FormData) {
-  const raw = {
-    type: data.get("type"),
-    amount: data.get("amount"),
-    date: data.get("date"),
-    note: data.get("note") || undefined,
-    categoryId: data.get("categoryId"),
-  }
+  const profileId = await getLockerId()
+  if (!profileId || profileId === "system-default")
+    return { error: { profileId: ["Device not found"] } }
 
+  const raw = {
+    amount: data.get("amount"),
+    type: data.get("type"),
+    categoryId: data.get("categoryId"),
+    date: data.get("date"),
+    description: data.get("description"),
+  }
   const parsed = transactionSchema.safeParse(raw)
   if (!parsed.success) return { error: parsed.error.flatten().fieldErrors }
 
-  await prisma.transaction.update({ 
-    where: { id }, 
-    data: {
-      type: parsed.data.type,
-      amount: parsed.data.amount,
-      date: parsed.data.date,
-      note: parsed.data.note ?? null,
-      categoryId: parsed.data.categoryId,
-    } 
+  await prisma.transaction.update({
+    where: { id, profileId },
+    data: parsed.data,
   })
-  
-  revalidatePath("/")
+  revalidatePath("/dashboard")
   revalidatePath("/transactions")
-  revalidatePath("/budgets")
   return { success: true }
 }
 
+// Delete a transaction
 export async function deleteTransaction(id: string) {
-  await prisma.transaction.delete({ where: { id } })
-  revalidatePath("/")
+  const profileId = await getLockerId()
+  if (!profileId || profileId === "system-default")
+    return { error: "Device not found" }
+
+  await prisma.transaction.deleteMany({ where: { id, profileId } })
+  revalidatePath("/dashboard")
   revalidatePath("/transactions")
-  revalidatePath("/budgets")
   return { success: true }
 }
 
-export async function getTransactionStats(month?: number, year?: number) {
-  const currentDeviceId = await getLockerId();
-  const now = new Date()
-  const m = month ?? now.getMonth() + 1
-  const y = year ?? now.getFullYear()
-
-  const startDate = new Date(y, m - 1, 1)
-  const endDate = new Date(y, m, 0, 23, 59, 59)
-
-  const transactions = await prisma.transaction.findMany({
-    where: { profileId: currentDeviceId, date: { gte: startDate, lte: endDate } },
-    include: { category: true },
-  })
-
-  const income = transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
-  const expenses = transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0)
-
-  const categorySpending = transactions.filter((t) => t.type === "expense").reduce((acc, t) => {
-    const catName = t.category.name
-    acc[catName] = {
-      amount: (acc[catName]?.amount ?? 0) + t.amount,
-      icon: t.category.icon,
-      categoryId: t.categoryId,
-    }
-    return acc
-  }, {} as Record<string, { amount: number; icon: string; categoryId: string }>)
-
-  return { income, expenses, balance: income - expenses, categorySpending, transactions }
-}
-
-export async function getMonthlyTrends(months: number = 6) {
-  const currentDeviceId = await getLockerId();
-  const now = new Date()
-  const results = []
-
-  for (let i = months - 1; i >= 0; i--) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    const startDate = new Date(date.getFullYear(), date.getMonth(), 1)
-    const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59)
+// Compute simple stats for the current profile
+export async function getTransactionStats() {
+  try {
+    const profileId = await getLockerId()
+    if (!profileId || profileId === "system-default")
+      throw new Error("Device not found")
 
     const transactions = await prisma.transaction.findMany({
-      where: { profileId: currentDeviceId, date: { gte: startDate, lte: endDate } },
+      where: { profileId },
+      include: { category: true },
     })
 
-    const income = transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
-    const expenses = transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0)
+    const income = transactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + t.amount, 0)
 
-    results.push({ month: date.toLocaleDateString("en-US", { month: "short" }), income, expenses, savings: income - expenses })
+    const expenses = transactions
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => sum + t.amount, 0)
+
+    const categoryMap = transactions
+      .filter((t) => t.type === "expense")
+      .reduce((acc, t) => {
+        const name = t.category?.name || "Uncategorized"
+        const icon = t.category?.icon || "❓"
+        acc[name] = acc[name] || { name, icon, amount: 0 }
+        acc[name].amount += t.amount
+        return acc
+      }, {} as Record<string, { name: string; icon: string; amount: number }>)
+
+    return {
+      income,
+      expenses,
+      balance: income - expenses,
+      transactions,
+      categorySpending: categoryMap,
+    }
+  } catch (error) {
+    return { income: 0, expenses: 0, balance: 0, transactions: [], categorySpending: {} }
   }
-  return results
+}
+
+// Get monthly trends for the last `months` months (default 6)
+export async function getMonthlyTrends(months: number = 6) {
+  try {
+    const profileId = await getLockerId()
+    if (!profileId || profileId === "system-default")
+      throw new Error("Device not found")
+
+    const now = new Date()
+    const results: { month: string; income: number; expenses: number; savings: number }[] = []
+
+    for (let i = months - 1; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const startDate = new Date(date.getFullYear(), date.getMonth(), 1)
+      const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59)
+      
+      let transactions: any[] = []
+      try {
+        transactions = await prisma.transaction.findMany({
+          where: { profileId, date: { gte: startDate, lte: endDate } },
+        })
+      } catch (e) {
+        console.warn("Failed to fetch transactions for trend, skipping month", e)
+        continue
+      }
+      
+      const income = transactions
+        .filter((t) => t.type === "income")
+        .reduce((sum, t) => sum + t.amount, 0)
+      const expenses = transactions
+        .filter((t) => t.type === "expense")
+        .reduce((sum, t) => sum + t.amount, 0)
+        
+      results.push({
+        month: date.toLocaleDateString("en-US", { month: "short" }),
+        income,
+        expenses,
+        savings: income - expenses,
+      })
+    }
+    return results
+  } catch (e) {
+    console.error("Failed to fetch monthly trends:", e)
+    return []
+  }
 }

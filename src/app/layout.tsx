@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
+import { FinanceProvider } from "@/components/FinanceProvider"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { AuthGate } from "@/components/auth-gate"
+// AuthGate disabled – kept for future use
 import { ThemeProvider } from "@/components/ThemeProvider"
 import { cookies } from "next/headers"
 
@@ -35,9 +36,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-            <AuthGate>
-              {children}
-            </AuthGate>
+            <FinanceProvider>{children}</FinanceProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useTransition } from "react"
-import { useRouter } from "next/navigation"
-import { Plus, X, Calendar, DollarSign, StickyNote, Tag } from "lucide-react"
+import { useState } from "react"
+import { Plus, Calendar, DollarSign, StickyNote, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,62 +19,80 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { createTransaction, updateTransaction } from "@/lib/actions/transactions"
+import { useFinance, type Transaction } from "@/components/FinanceProvider"
 import { cn } from "@/lib/utils"
 
-type Category = { id: string; name: string; icon: string }
-type Transaction = {
-  id: string
-  type: string
-  amount: number
-  date: Date | string
-  note: string | null
-  categoryId: string
-}
-
 interface TransactionFormProps {
-  categories: Category[]
+  /** Pass an existing transaction to edit it; omit to create new. */
   transaction?: Transaction
+  /** Custom trigger element; defaults to an "Add Transaction" button. */
   trigger?: React.ReactNode
 }
 
-export function TransactionForm({ categories, transaction, trigger }: TransactionFormProps) {
+export function TransactionForm({ transaction, trigger }: TransactionFormProps) {
+  const { categories, addTransaction, updateTransaction } = useFinance()
   const [open, setOpen] = useState(false)
   const [type, setType] = useState<"income" | "expense">(
     (transaction?.type as "income" | "expense") ?? "expense"
   )
   const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? "")
-  const [errors, setErrors] = useState<Record<string, string[]>>({})
-  const [isPending, startTransition] = useTransition()
-  const router = useRouter()
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
+  const todayStr = new Date().toISOString().split("T")[0]
   const dateValue = transaction?.date
     ? new Date(transaction.date).toISOString().split("T")[0]
-    : new Date().toISOString().split("T")[0]
+    : todayStr
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    formData.set("type", type)
-    formData.set("categoryId", categoryId)
+    const fd = new FormData(e.currentTarget)
 
-    startTransition(async () => {
-      const result = transaction
-        ? await updateTransaction(transaction.id, formData)
-        : await createTransaction(formData)
+    const amountRaw = fd.get("amount") as string
+    const date      = fd.get("date") as string
+    const note      = (fd.get("note") as string) ?? ""
 
-      if (result?.error) {
-        setErrors(result.error as Record<string, string[]>)
-      } else {
-        setOpen(false)
-        setErrors({})
-        router.refresh()
-      }
-    })
+    const newErrors: Record<string, string> = {}
+    if (!amountRaw || Number(amountRaw) <= 0) newErrors.amount = "Amount must be greater than 0"
+    if (!categoryId) newErrors.categoryId = "Please select a category"
+    if (!date) newErrors.date = "Please select a date"
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+
+    const txData = {
+      type,
+      amount: parseFloat(amountRaw),
+      date,
+      note,
+      categoryId,
+    }
+
+    if (transaction) {
+      updateTransaction(transaction.id, txData)
+    } else {
+      addTransaction(txData)
+    }
+
+    setOpen(false)
+    setErrors({})
+    // Reset form state
+    setType("expense")
+    setCategoryId("")
+  }
+
+  function handleOpenChange(val: boolean) {
+    setOpen(val)
+    if (val) {
+      setType((transaction?.type as "income" | "expense") ?? "expense")
+      setCategoryId(transaction?.categoryId ?? "")
+      setErrors({})
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger ?? (
           <Button id="add-transaction-btn" className="gap-2">
@@ -112,7 +129,7 @@ export function TransactionForm({ categories, transaction, trigger }: Transactio
               className={cn(
                 "flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-200",
                 type === "income"
-                  ? "bg-[oklch(0.696_0.17_162)] text-[oklch(0.145_0_0)] shadow-sm"
+                  ? "bg-emerald-500 text-white shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -131,15 +148,13 @@ export function TransactionForm({ categories, transaction, trigger }: Transactio
               name="amount"
               type="number"
               step="0.01"
-              min="0"
+              min="0.01"
               placeholder="0.00"
               defaultValue={transaction?.amount}
               className="text-lg font-semibold"
               required
             />
-            {errors.amount && (
-              <p className="text-xs text-destructive">{errors.amount[0]}</p>
-            )}
+            {errors.amount && <p className="text-xs text-destructive">{errors.amount}</p>}
           </div>
 
           {/* Category */}
@@ -148,24 +163,31 @@ export function TransactionForm({ categories, transaction, trigger }: Transactio
               <Tag className="w-3.5 h-3.5 text-muted-foreground" />
               Category
             </Label>
-            <Select value={categoryId} onValueChange={setCategoryId} required>
-              <SelectTrigger id="category-select">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    <span className="flex items-center gap-2">
-                      <span>{cat.icon}</span>
-                      <span>{cat.name}</span>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.categoryId && (
-              <p className="text-xs text-destructive">{errors.categoryId[0]}</p>
+            {categories.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No categories yet.{" "}
+                <a href="/categories" className="underline text-primary">
+                  Add some first →
+                </a>
+              </p>
+            ) : (
+              <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setErrors(prev => ({ ...prev, categoryId: "" })) }}>
+                <SelectTrigger id="category-select">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      <span className="flex items-center gap-2">
+                        <span>{cat.icon}</span>
+                        <span>{cat.name}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
+            {errors.categoryId && <p className="text-xs text-destructive">{errors.categoryId}</p>}
           </div>
 
           {/* Date */}
@@ -179,8 +201,10 @@ export function TransactionForm({ categories, transaction, trigger }: Transactio
               name="date"
               type="date"
               defaultValue={dateValue}
+              max={todayStr}
               required
             />
+            {errors.date && <p className="text-xs text-destructive">{errors.date}</p>}
           </div>
 
           {/* Note */}
@@ -206,8 +230,8 @@ export function TransactionForm({ categories, transaction, trigger }: Transactio
             >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={isPending || !categoryId}>
-              {isPending ? "Saving..." : transaction ? "Save Changes" : "Add Transaction"}
+            <Button type="submit" className="flex-1" disabled={categories.length === 0}>
+              {transaction ? "Save Changes" : "Add Transaction"}
             </Button>
           </div>
         </form>

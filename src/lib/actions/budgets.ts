@@ -13,43 +13,58 @@ async function getLockerId() {
 
 export async function getBudgets(month?: number, year?: number) {
   const profileId = await getLockerId();
-  if (!profileId || profileId === "system-default") return []
+  if (!profileId || profileId === "system-default") return [];
 
-  const now = new Date()
-  const m = month ?? now.getMonth() + 1
-  const y = year ?? now.getFullYear()
+  const now = new Date();
+  const m = month ?? now.getMonth() + 1;
+  const y = year ?? now.getFullYear();
 
-  const budgets = await prisma.budget.findMany({
-    where: { profileId, month: m, year: y },
-    include: { category: true },
-  })
+  let budgets = [];
+  try {
+    budgets = await prisma.budget.findMany({
+      where: { profileId, month: m, year: y },
+      include: { category: true },
+    });
+  } catch (e) {
+    console.warn("Failed to fetch budgets, returning empty list", e);
+    return [];
+  }
 
-  const startDate = new Date(y, m - 1, 1)
-  const endDate = new Date(y, m, 0, 23, 59, 59)
+  const startDate = new Date(y, m - 1, 1);
+  const endDate = new Date(y, m, 0, 23, 59, 59);
 
   const budgetsWithSpent = await Promise.all(
     budgets.map(async (budget) => {
-      const spent = await prisma.transaction.aggregate({
-        where: {
-          profileId,
-          categoryId: budget.categoryId,
-          type: "expense",
-          date: { gte: startDate, lte: endDate },
-        },
-        _sum: { amount: true },
-      })
-      return {
-        ...budget,
-        spent: spent._sum.amount ?? 0,
-        percentage: Math.min(
-          100,
-          Math.round(((spent._sum.amount ?? 0) / budget.limit) * 100)
-        ),
+      try {
+        const spent = await prisma.transaction.aggregate({
+          where: {
+            profileId,
+            categoryId: budget.categoryId,
+            type: "expense",
+            date: { gte: startDate, lte: endDate },
+          },
+          _sum: { amount: true },
+        });
+        return {
+          ...budget,
+          spent: spent._sum.amount ?? 0,
+          percentage: Math.min(
+            100,
+            Math.round(((spent._sum.amount ?? 0) / budget.limit) * 100)
+          ),
+        };
+      } catch (e) {
+        console.warn(`Failed to aggregate spent for budget ${budget.id}`, e);
+        return {
+          ...budget,
+          spent: 0,
+          percentage: 0,
+        };
       }
     })
-  )
+  );
 
-  return budgetsWithSpent
+  return budgetsWithSpent;
 }
 
 export async function upsertBudget(data: FormData) {
