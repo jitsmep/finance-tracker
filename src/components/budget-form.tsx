@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { upsertBudget, deleteBudget } from "@/lib/actions/budgets"
+import { useFinance } from "@/components/FinanceProvider"
 
 type Category = { id: string; name: string; icon: string }
 
@@ -44,8 +43,8 @@ export function BudgetForm({
   const [open, setOpen] = useState(false)
   const [categoryId, setCategoryId] = useState(editBudget?.categoryId ?? "")
   const [errors, setErrors] = useState<Record<string, string[]>>({})
-  const [isPending, startTransition] = useTransition()
-  const router = useRouter()
+  const { addBudget } = useFinance()
+  const isPending = false
 
   const availableCategories = editBudget
     ? categories
@@ -54,20 +53,22 @@ export function BudgetForm({
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
-    formData.set("categoryId", categoryId)
-    formData.set("month", String(month))
-    formData.set("year", String(year))
+    const limitRaw = formData.get("limit") as string
+    const limit = parseFloat(limitRaw)
 
-    startTransition(async () => {
-      const result = await upsertBudget(formData)
-      if (result?.error) {
-        setErrors(result.error as Record<string, string[]>)
-      } else {
-        setOpen(false)
-        setErrors({})
-        router.refresh()
-      }
+    if (isNaN(limit) || limit <= 0) {
+      setErrors({ limit: ["Limit must be greater than 0"] })
+      return
+    }
+
+    addBudget({
+      categoryId,
+      month,
+      year,
+      limit,
     })
+    setOpen(false)
+    setErrors({})
   }
 
   return (
@@ -150,21 +151,14 @@ interface DeleteBudgetButtonProps {
 }
 
 export function DeleteBudgetButton({ id }: DeleteBudgetButtonProps) {
-  const [isPending, startTransition] = useTransition()
-  const router = useRouter()
+  const { deleteBudget } = useFinance()
 
   return (
     <button
-      disabled={isPending}
-      onClick={() =>
-        startTransition(async () => {
-          await deleteBudget(id)
-          router.refresh()
-        })
-      }
-      className="text-xs text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+      onClick={() => deleteBudget(id)}
+      className="text-xs text-muted-foreground hover:text-destructive transition-colors"
     >
-      {isPending ? "..." : "Remove"}
+      Remove
     </button>
   )
 }

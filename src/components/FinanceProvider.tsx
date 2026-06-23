@@ -19,6 +19,14 @@ export type Transaction = {
   categoryId: string;
 };
 
+export type Budget = {
+  id: string;
+  month: number;
+  year: number;
+  limit: number;
+  categoryId: string;
+};
+
 type FinanceContextType = {
   categories: Category[];
   setCategories: (cats: Category[]) => void;
@@ -31,6 +39,11 @@ type FinanceContextType = {
   addTransaction: (tx: Omit<Transaction, "id">) => void;
   updateTransaction: (id: string, data: Partial<Omit<Transaction, "id">>) => void;
   deleteTransaction: (id: string) => void;
+
+  budgets: Budget[];
+  setBudgets: (buds: Budget[]) => void;
+  addBudget: (bud: Omit<Budget, "id">) => void;
+  deleteBudget: (id: string) => void;
 
   currency: string;
   setCurrency: (code: string) => void;
@@ -65,6 +78,7 @@ const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
   const [currency, setCurrencyState] = useState<string>("INR");
   const [deviceId, setDeviceId] = useState<string>("");
   const [lastSynced, setLastSynced] = useState<string>("");
@@ -76,6 +90,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const savedCats = JSON.parse(localStorage.getItem("finance_categories") || "null");
     const savedTxs  = JSON.parse(localStorage.getItem("finance_transactions") || "[]");
     const savedCur  = localStorage.getItem("finance_currency") || "INR";
+    const savedBuds = JSON.parse(localStorage.getItem("finance_budgets") || "[]");
     let savedDevId  = localStorage.getItem("finance_device_id");
 
     if (!savedDevId) {
@@ -92,6 +107,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
     setCategories(savedCats && savedCats.length > 0 ? savedCats : DEFAULT_CATEGORIES);
     setTransactions(savedTxs);
+    setBudgets(savedBuds);
     setCurrencyState(savedCur);
     setDeviceId(savedDevId);
     setLastSynced(savedSynced);
@@ -103,7 +119,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     currentId = deviceId,
     cats = categories,
     txs = transactions,
-    cur = currency
+    cur = currency,
+    buds = budgets
   ) => {
     if (!currentId) return;
     setIsSyncing(true);
@@ -113,7 +130,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ categories: cats, transactions: txs, currency: cur }),
+        body: JSON.stringify({ categories: cats, transactions: txs, currency: cur, budgets: buds }),
       });
       if (res.ok) {
         const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -126,7 +143,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsSyncing(false);
     }
-  }, [deviceId, categories, transactions, currency]);
+  }, [deviceId, categories, transactions, currency, budgets]);
 
   const restoreBackup = useCallback(async (targetDeviceId: string): Promise<{ success: boolean; error?: string }> => {
     setIsSyncing(true);
@@ -147,17 +164,20 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       const newCats = data.categories && data.categories.length > 0 ? data.categories : DEFAULT_CATEGORIES;
       const newTxs = data.transactions || [];
       const newCur = data.currency || "INR";
+      const newBuds = data.budgets || [];
 
       setCategories(newCats);
       setTransactions(newTxs);
       setCurrencyState(newCur);
+      setBudgets(newBuds);
       setDeviceId(targetDeviceId);
 
       // Save directly to localStorage
-      localStorage.setItem("finance_categories", JSON.stringify(newCats));
-      localStorage.setItem("finance_transactions", JSON.stringify(newTxs));
-      localStorage.setItem("finance_currency", newCur);
-      localStorage.setItem("finance_device_id", targetDeviceId);
+      localStorage.setItem("finance_categories",   JSON.stringify(newCats));
+      localStorage.setItem("finance_transactions",  JSON.stringify(newTxs));
+      localStorage.setItem("finance_currency",      newCur);
+      localStorage.setItem("finance_budgets",       JSON.stringify(newBuds));
+      localStorage.setItem("finance_device_id",     targetDeviceId);
       
       // Set the cookie
       document.cookie = `deviceId=${targetDeviceId}; path=/; max-age=31536000; SameSite=Lax`;
@@ -183,9 +203,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("finance_categories",   JSON.stringify(categories));
     localStorage.setItem("finance_transactions",  JSON.stringify(transactions));
     localStorage.setItem("finance_currency",      currency);
+    localStorage.setItem("finance_budgets",       JSON.stringify(budgets));
 
     const timer = setTimeout(() => {
-      uploadBackup(deviceId, categories, transactions, currency);
+      uploadBackup(deviceId, categories, transactions, currency, budgets);
     }, 1500); // 1.5s debounce to cluster fast changes
 
     return () => clearTimeout(timer);
@@ -233,6 +254,27 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setTransactions(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  // ── Budget helpers ─────────────────────────────────────────────────────────
+  const addBudget = useCallback((bud: Omit<Budget, "id">) => {
+    setBudgets(prev => {
+      const existingIdx = prev.findIndex(
+        b => b.categoryId === bud.categoryId && b.month === bud.month && b.year === bud.year
+      );
+      if (existingIdx > -1) {
+        const next = [...prev];
+        next[existingIdx] = { ...next[existingIdx], limit: bud.limit };
+        return next;
+      } else {
+        const newBud: Budget = { id: `bud-${Date.now()}`, ...bud };
+        return [...prev, newBud];
+      }
+    });
+  }, []);
+
+  const deleteBudget = useCallback((id: string) => {
+    setBudgets(prev => prev.filter(b => b.id !== id));
+  }, []);
+
   const setCurrency = useCallback((code: string) => {
     setCurrencyState(code);
   }, []);
@@ -246,12 +288,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Create stable upload reference for the context
-  const triggerUpload = () => uploadBackup(deviceId, categories, transactions, currency);
+  const triggerUpload = () => uploadBackup(deviceId, categories, transactions, currency, budgets);
 
   return (
     <FinanceContext.Provider value={{
       categories, setCategories, addCategory, updateCategory, deleteCategory,
       transactions, setTransactions, addTransaction, updateTransaction, deleteTransaction,
+      budgets, setBudgets, addBudget, deleteBudget,
       currency, setCurrency,
       deviceId, lastSynced, isSyncing,
       uploadBackup: triggerUpload,

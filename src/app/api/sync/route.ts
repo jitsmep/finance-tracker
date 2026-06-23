@@ -48,12 +48,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { categories, transactions, currency } = body;
+    const { categories, transactions, currency, budgets } = body;
 
     const payload = {
       categories: categories || [],
       transactions: transactions || [],
       currency: currency || "INR",
+      budgets: budgets || [],
       updatedAt: new Date().toISOString(),
     };
 

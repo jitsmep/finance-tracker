@@ -1,33 +1,48 @@
-import { getBudgets } from "@/lib/actions/budgets"
-import { getCategories } from "@/lib/actions/categories"
-import { getSettings } from "@/lib/actions/settings"
+"use client"
+
+import { useMemo } from "react"
+import { useSearchParams } from "next/navigation"
+import { useFinance } from "@/components/FinanceProvider"
 import { BudgetForm, DeleteBudgetButton } from "@/components/budget-form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency, type CurrencyCode } from "@/lib/utils"
 import { AlertTriangle, CheckCircle2, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-interface Props {
-  searchParams: Promise<{ month?: string; year?: string }>
-}
-
-export default async function BudgetsPage({ searchParams }: Props) {
-  const params = await searchParams
+export default function BudgetsPage() {
+  const searchParams = useSearchParams()
+  const monthParam = searchParams.get("month")
+  const yearParam = searchParams.get("year")
   const now = new Date()
-  const month = params.month ? parseInt(params.month) : now.getMonth() + 1
-  const year = params.year ? parseInt(params.year) : now.getFullYear()
+  const month = monthParam ? parseInt(monthParam) : now.getMonth() + 1
+  const year = yearParam ? parseInt(yearParam) : now.getFullYear()
 
-  const [budgets, categories, settings] = await Promise.all([
-    getBudgets(month, year),
-    getCategories(),
-    getSettings(),
-  ])
+  const { budgets: localBudgets, categories, transactions, currency: currencyState } = useFinance()
 
-  const currency = settings.currencyCode as CurrencyCode
-  const existingCategoryIds = budgets.map((b) => b.categoryId)
-  const totalLimit = budgets.reduce((s, b) => s + b.limit, 0)
-  const totalSpent = budgets.reduce((s, b) => s + b.spent, 0)
-  const overBudgetCount = budgets.filter((b) => b.percentage >= 100).length
+  const monthStr = `${year}-${String(month).padStart(2, "0")}`
+
+  const budgets = useMemo(() => {
+    return localBudgets
+      .filter((b) => b.month === month && b.year === year)
+      .map((budget) => {
+        const category = categories.find((c) => c.id === budget.categoryId)
+        const spent = transactions
+          .filter((t) => t.type === "expense" && t.categoryId === budget.categoryId && t.date.startsWith(monthStr))
+          .reduce((sum, t) => sum + t.amount, 0)
+
+        return {
+          ...budget,
+          category: category || { name: "Unknown", icon: "❓", id: budget.categoryId },
+          spent,
+          percentage: budget.limit > 0 ? Math.min(100, Math.round((spent / budget.limit) * 100)) : 0
+        }
+      })
+  }, [localBudgets, categories, transactions, month, year, monthStr])
+
+  const currency = currencyState as CurrencyCode
+  const existingCategoryIds = useMemo(() => budgets.map((b) => b.categoryId), [budgets])
+  const totalLimit = useMemo(() => budgets.reduce((s, b) => s + b.limit, 0), [budgets])
+  const totalSpent = useMemo(() => budgets.reduce((s, b) => s + b.spent, 0), [budgets])
 
   const monthName = new Date(year, month - 1, 1).toLocaleDateString("en-US", {
     month: "long",

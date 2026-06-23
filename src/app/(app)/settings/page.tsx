@@ -1,28 +1,30 @@
-import { getSettings, updateCurrency } from "@/lib/actions/settings";
-import { getUserEmail } from "@/lib/actions/auth-actions";
-import { revalidatePath } from "next/cache";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useFinance } from "@/components/FinanceProvider";
 import { ThemeSettings } from "@/components/ThemeSettings";
 import { NavLayoutSettings } from "@/components/NavLayoutSettings";
 import { ChangePinForm } from "@/components/ChangePinForm";
 import { ChangeEmailForm } from "@/components/ChangeEmailForm";
-import { cookies } from "next/headers";
 import { ExportData } from "@/components/export-data";
 import { Settings2, Palette, Database, Info, Globe } from "lucide-react";
 
+export default function SettingsPage() {
+  const { currency, setCurrency } = useFinance();
+  const [navLayout, setNavLayout] = useState("sidebar");
 
-export const dynamic = "force-dynamic";
+  useEffect(() => {
+    const match = document.cookie.match(/(?:^|; )nav_layout=([^;]*)/);
+    if (match) setNavLayout(match[1]);
+  }, []);
 
-export default async function SettingsPage() {
-  const settings = await getSettings();
-  const userEmail = await getUserEmail();
-  const cookieStore = await cookies();
-  const navLayout = cookieStore.get("nav_layout")?.value || "sidebar";
-
-  async function handleUpdateCurrency(formData: FormData) {
-    "use server";
+  function handleUpdateCurrency(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     const currencyCode = formData.get("currency") as string;
-    await updateCurrency(currencyCode);
-    revalidatePath("/settings");
+    if (currencyCode) {
+      setCurrency(currencyCode);
+    }
   }
 
   const currencies = [
@@ -50,7 +52,7 @@ export default async function SettingsPage() {
       <section className="space-y-3">
         <SectionHeader icon={<Settings2 className="w-4 h-4" />} label="Preferences" />
         <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
-          <form action={handleUpdateCurrency}>
+          <form onSubmit={handleUpdateCurrency}>
             <div className="p-5 space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -59,7 +61,8 @@ export default async function SettingsPage() {
                 </label>
                 <select
                   name="currency"
-                  defaultValue={settings.currencyCode}
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
                   className="w-full p-3 rounded-xl bg-secondary/40 border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition"
                 >
                   {currencies.map((c) => (

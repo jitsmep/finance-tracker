@@ -1,29 +1,72 @@
-export const dynamic = "force-dynamic";
-import { getMonthlyTrends, getTransactionStats } from "@/lib/actions/transactions"
-import { getSettings } from "@/lib/actions/settings"
+"use client"
+
+import { useMemo } from "react"
+import { useFinance } from "@/components/FinanceProvider"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency, type CurrencyCode } from "@/lib/utils"
 import { AnalyticsCharts } from "./analytics-charts"
 
-export default async function AnalyticsPage() {
-  const [trends, stats, settings] = await Promise.all([
-    getMonthlyTrends(6),
-    getTransactionStats(),
-    getSettings(),
-  ])
+export default function AnalyticsPage() {
+  const { transactions, categories, currency: currencyState } = useFinance()
+  const currency = currencyState as CurrencyCode
 
-  const currency = settings.currencyCode as CurrencyCode
+  const trends = useMemo(() => {
+    const results = []
+    const now = new Date()
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      const monthTxs = transactions.filter(t => t.date.startsWith(monthStr))
+      const inc = monthTxs.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0)
+      const exp = monthTxs.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+      results.push({
+        month: d.toLocaleDateString("en-US", { month: "short" }),
+        income: inc,
+        expenses: exp,
+        savings: inc - exp,
+      })
+    }
+    return results
+  }, [transactions])
 
-  const categoryData = Object.entries(stats.categorySpending)
-    .map(([name, data]) => ({ name, value: data.amount, icon: data.icon }))
-    .sort((a, b) => b.value - a.value)
+  const stats = useMemo(() => {
+    const now = new Date()
+    const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+    const currentMonthTxs = transactions.filter(t => t.date.startsWith(monthStr))
 
-  const avgIncome = trends.length
+    const expenses = currentMonthTxs
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => sum + t.amount, 0)
+
+    const categoryMap = currentMonthTxs
+      .filter((t) => t.type === "expense")
+      .reduce((acc, t) => {
+        const cat = categories.find((c) => c.id === t.categoryId)
+        const name = cat?.name || "Uncategorized"
+        const icon = cat?.icon || "❓"
+        acc[name] = acc[name] || { name, icon, amount: 0 }
+        acc[name].amount += t.amount
+        return acc
+      }, {} as Record<string, { name: string; icon: string; amount: number }>)
+
+    return {
+      expenses,
+      categorySpending: categoryMap,
+    }
+  }, [transactions, categories])
+
+  const categoryData = useMemo(() => {
+    return Object.entries(stats.categorySpending)
+      .map(([name, data]) => ({ name, value: data.amount, icon: data.icon }))
+      .sort((a, b) => b.value - a.value)
+  }, [stats.categorySpending])
+
+  const avgIncome = useMemo(() => trends.length
     ? trends.reduce((s, t) => s + t.income, 0) / trends.length
-    : 0
-  const avgExpenses = trends.length
+    : 0, [trends])
+  const avgExpenses = useMemo(() => trends.length
     ? trends.reduce((s, t) => s + t.expenses, 0) / trends.length
-    : 0
+    : 0, [trends])
   const avgSavings = avgIncome - avgExpenses
   const savingsRate = avgIncome > 0 ? Math.round((avgSavings / avgIncome) * 100) : 0
 

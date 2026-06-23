@@ -1,0 +1,57 @@
+{
+  "categories": [
+    {
+      "id": "1",
+      "name": "Salary",
+      "icon": "💰",
+      "isDefault": true
+    },
+    {
+      "id": "2",
+      "name": "Groceries",
+      "icon": "🛒",
+      "isDefault": true
+    },
+    {
+      "id": "3",
+      "name": "Rent / EMI",
+      "icon": "🏠",
+      "isDefault": true
+    },
+    {
+      "id": "4",
+      "name": "Petrol & Transit",
+      "icon": "🚗",
+      "isDefault": true
+    }
+  ],
+  "transactions": [
+    {
+      "id": "tx-1782212555970",
+      "type": "expense",
+      "amount": 5000,
+      "date": "2026-06-23",
+      "note": "",
+      "categoryId": "2"
+    },
+    {
+      "id": "tx-1782212393207",
+      "type": "expense",
+      "amount": 200,
+      "date": "2026-06-23",
+      "note": "",
+      "categoryId": "2"
+    }
+  ],
+  "currency": "INR",
+  "budgets": [
+    {
+      "id": "bud-1782212377863",
+      "categoryId": "2",
+      "month": 6,
+      "year": 2026,
+      "limit": 5000
+    }
+  ],
+  "updatedAt": "2026-06-23T11:02:37.643Z"
+}
